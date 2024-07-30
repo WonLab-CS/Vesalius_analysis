@@ -2,7 +2,6 @@
 # Loading Libraries and setting seed
 #-----------------------------------------------------------------------------#
 library(dplyr)
-library(Seurat)
 library(future)
 library(future.apply)
 library(ggplot2)
@@ -16,17 +15,21 @@ library(Morpho)
 library(lpSolve, lib = "/common/martinp4/R")
 library(TreeDist, lib.loc = "/common/martinp4/R")
 library(mclust, lib.loc = "/common/martinp4/R")
+library(anndata, lib.loc = "/common/martinp4/R")
 library(pwr, lib.loc = "/common/martinp4/R")
+library(gsignal, lib.loc = "/common/martinp4/R")
 library(kohonen, lib.loc = "/common/martinp4/R")
 library(registry, lib.loc = "/common/martinp4/R")
 library(rngtools, lib.loc = "/common/martinp4/R")
 library(NMF, lib.loc = "/common/martinp4/R")
+library(RcppHungarian, lib.loc = "/common/martinp4/R")
+library(spatstat.utils, lib.loc = "/common/martinp4/R")
+library(geometry, lib.loc = "/common/martinp4/R")
 library(vesalius, lib.loc = "/common/martinp4/R")
 library(RColorBrewer)
 
-
 set.seed(1547)
-plan(multicore, workers = 2)
+#plan(multicore, workers = 2)
 max_size <- 100000 * 1024^2
 options(future.globals.maxSize = max_size)
 
@@ -36,65 +39,80 @@ options(future.globals.maxSize = max_size)
 args <- commandArgs(TRUE)
 idx <- as.numeric(args[1])
 
-if (!dir.exists("/common/wonklab/Stereo_seq_arista/report/")) {
-    dir.create("/common/wonklab/Stereo_seq_arista/report/")
+if (!dir.exists("/common/wonklab/Stereo_seq/report/")) {
+    dir.create("/common/wonklab/Stereo_seq/report/")
 }
-output_plots <- "/common/wonklab/Stereo_seq_arista/report/"
-output_data <- "/common/wonklab/Stereo_seq_arista/report/"
+output_plots <- "/common/wonklab/Stereo_seq/report/"
+output_data <- "/common/wonklab/Stereo_seq/report/"
 
-
+h5 <- "/common/wonklab/Stereo_seq/Mouse_embryo_all_stage.h5ad"
 #-----------------------------------------------------------------------------#
 # load and prepare data
 #-----------------------------------------------------------------------------#
-file_loc <- list.files("/common/wonklab/Stereo_seq_arista/",
-    pattern = ".rds",
-    full.names = TRUE)
-file_loc <- grep("DPI",file_loc, value = TRUE)
-file_vec <- file_loc[c(11,15,1,4,8,14,18)]
+h5 <- read_h5ad(h5)
+counts <- t(h5$X)
+annot <- as.character(h5$obs$annotation)
 
-seed <- file_vec[idx + 1]
-stage_seed <- gsub("/common/wonklab/Stereo_seq_arista//","",seed)
-stage_seed <- gsub(".rds","",stage_seed)
-query <- file_vec[idx]
-stage_query <- gsub("/common/wonklab/Stereo_seq_arista//","",query)
-stage_query <- gsub(".rds","",stage_query)
+if (!file.exists(paste0(output_data,"labels.csv"))){
+    types <- unique(annot)
+    n_colors <- length(types)
+    base_colours <- c(
+      "#E69F00",
+      "#56B4E9",
+      "#009E73",
+      "#F0E442",
+      "#0072B2",
+      "#D55E00",
+      "#CC79A7",
+      "#999999")
+    pal <- colorRampPalette(base_colours)
+    colors <- pal(n_colors)[sample(seq(1, n_colors),size = n_colors)]
+    labels <- data.frame("labels" = types, "colors" = colors)
+    write.csv(labels, file = paste0(output_data,"labels.csv"),row.names = FALSE)
+}
 
-seed <- readRDS(seed)
-seed_counts <- GetAssayData(seed, layer = "counts")
-seed_coord <- GetTissueCoordinates(seed)
-seed_coord <- data.frame("barcodes" = rownames(seed_coord),
-    "x" = seed_coord$imagerow,
-    "y" = seed_coord$imagecol)
-seed_cells <- seed@meta.data$Annotation
-names(seed_cells) <- rownames(seed@meta.data)
-seed <- build_vesalius_assay(coordinates = seed_coord,
-    counts = seed_counts)
-seed <- add_cells(seed, cells = seed_cells)
 
-query <- readRDS(query)
-query_counts <- GetAssayData(query, layer = "counts")
-query_coord <- GetTissueCoordinates(query)
-query_coord <- data.frame("barcodes" = rownames(query_coord),
-    "x" = query_coord$imagerow,
-    "y" = query_coord$imagecol)
-query_cells <- query@meta.data$Annotation
-names(query_cells) <- rownames(query@meta.data)
-query <- build_vesalius_assay(coordinates = query_coord,
-    counts = query_counts)
-query <- add_cells(query, cells = query_cells)
+coord <- cbind(rownames(h5$obs), as.data.frame(h5$obsm$spatial), annot)
+names(annot) <- rownames(h5$obs)
+colnames(coord) <- c("barcodes", "x", "y", "trial")
+
+stages <- sort(unique(h5$obs$timepoint))
+stage_seed <- stages[idx + 1]
+stage_query <- stages[idx]
+
+
+
+locs_seed <- which(h5$obs$timepoint == stage_seed)
+locs_seed <- sample(locs_seed, size = min(c(length(locs_seed), 50000)))
+seed_coord <- coord[locs_seed, ]
+seed_counts <- as(counts[, locs_seed], "CsparseMatrix")
+
+
+
+locs_query <- which(h5$obs$timepoint == stage_query)
+locs_query <- sample(locs_query, size = min(c(length(locs_query), 50000)))
+query_coord <- coord[locs_query, ]
+query_counts <- as(counts[, locs_query], "CsparseMatrix")
+
 
 
 #use_cost <- c("feature", "niche", "cell_type", "composition", "territory")
-use_cost <- c("feature", "niche", "composition", "territory")
+use_cost <- c("feature", "niche", "territory")
 #-----------------------------------------------------------------------------#
 # Create embeddings 
 #-----------------------------------------------------------------------------#
 # REF
 
-if (file.exists(paste0(output_data, stage_seed, "_arista_regen.rds"))) {
-    seed <- readRDS(paste0(output_data, stage_seed, "_arista_regen.rds"))
+if (file.exists(paste0(output_data, stage_seed, "_stereo.rds"))) {
+    seed <- readRDS(paste0(output_data, stage_seed, "_stereo.rds"))
 } else {
+    seed <- build_vesalius_assay(coordinates = seed_coord,
+    counts = seed_counts)
+
+    seed_annot <- seed_coord$trial
+    names(seed_annot) <- seed_coord$barcodes
     
+    seed <- add_cells(seed, seed_annot, add_name = "Cells")
 
     seed <- generate_embeddings(seed, normalization = "none", tensor_resolution = 1, filter_threshold = 1, filter_grid =1) %>%
     equalize_image(embedding = "PCA", dimensions = 1:20, sleft = 2, sright = 2) %>%
@@ -103,24 +121,28 @@ if (file.exists(paste0(output_data, stage_seed, "_arista_regen.rds"))) {
     isolate_territories()
 
 
-    file_out <- paste0(output_data, stage_seed, "_arista_regen.rds")
+    file_out <- paste0(output_data, stage_seed, "_stereo.rds")
     saveRDS(seed, file = file_out)
 }
 
 
 # QUERY
-if (file.exists(paste0(output_data, stage_query, "_arista_regen.rds"))) {
-    query <- readRDS(paste0(output_data, stage_query, "_arista_regen.rds"))
+if (file.exists(paste0(output_data, stage_query, "_stereo.rds"))) {
+    query <- readRDS(paste0(output_data, stage_query, "_stereo.rds"))
 } else {
-    
-    
+    query <- build_vesalius_assay(coordinates = query_coord,
+        counts = query_counts)
+
+    query_annot <- query_coord$trial
+    names(query_annot) <- query_coord$barcodes
+    query <- add_cells(query, query_annot, add_name = "Cells")
 
     query <- generate_embeddings(query, normalization = "none",tensor_resolution = 1, filter_threshold = 1, filter_grid =1) %>%
     equalize_image(embedding = "PCA", dimensions = 1:20, sleft = 2, sright = 2) %>%
     smooth_image(dimensions = 1:20, method = c("iso", "box"), box = 10, sigma = 1, iter = 5) %>%
     segment_image(dimensions = 1:20, method = "kmeans", col_resolution = 20) %>%
     isolate_territories()
-    file_out <- paste0(output_data, stage_query, "_arista_regen.rds")
+    file_out <- paste0(output_data, stage_query, "_stereo.rds")
     saveRDS(query, file = file_out)
 }
 
@@ -135,9 +157,9 @@ matched <- map_assays(seed,
     depth = 3,
     threshold = 0,
     batch_size = 10000,
-    epochs = 5,
+    epochs = 10,
     use_norm = "raw",
-    jitter = FALSE)
+    jitter = 0)
 
-file_out <- paste0(output_data, stage_query,"_to_",stage_seed, "_arista_regen.rds")
+file_out <- paste0(output_data, stage_query,"_to_",stage_seed, "_stereo.rds")
 saveRDS(matched, file = file_out)

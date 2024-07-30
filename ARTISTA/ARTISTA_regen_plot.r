@@ -188,7 +188,7 @@ dev.off()
 #-----------------------------------------------------------------------------#
 # plot
 #-----------------------------------------------------------------------------#
-scores <- c("cost", "feature","niche","composition","territory")
+scores <- c("cost", "feature","niche","territory")
 map_scores <- vector("list", length(matched) * length(scores))
 
 count <- 1

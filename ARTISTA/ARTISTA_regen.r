@@ -49,12 +49,8 @@ output_data <- "/common/wonklab/Stereo_seq_arista/report/"
 file_loc <- list.files("/common/wonklab/Stereo_seq_arista/",
     pattern = ".rds",
     full.names = TRUE)
-file_loc <- grep("_arista_dev|_arista_regen",file_loc, value = TRUE, invert = TRUE)
-file_vec <- c(grep("Stage44",file_loc, value = TRUE),
-    grep("Stage54",file_loc, value = TRUE),
-    grep("Stage57",file_loc, value = TRUE),
-    grep("Control_Juv",file_loc, value = TRUE),
-    grep("Adult",file_loc, value = TRUE))
+file_loc <- grep("DPI",file_loc, value = TRUE)
+file_vec <- file_loc[c(11,15,1,4,8,14,18)]
 
 seed <- file_vec[idx + 1]
 stage_seed <- gsub("/common/wonklab/Stereo_seq_arista//","",seed)
@@ -89,14 +85,14 @@ query <- add_cells(query, cells = query_cells)
 
 
 #use_cost <- c("feature", "niche", "cell_type", "composition", "territory")
-use_cost <- c("feature", "niche", "composition", "territory")
+use_cost <- c("feature", "niche", "territory")
 #-----------------------------------------------------------------------------#
 # Create embeddings 
 #-----------------------------------------------------------------------------#
 # REF
 
-if (file.exists(paste0(output_data, stage_seed, "_arista_dev.rds"))) {
-    seed <- readRDS(paste0(output_data, stage_seed, "_arista_dev.rds"))
+if (file.exists(paste0(output_data, stage_seed, "_arista_regen.rds"))) {
+    seed <- readRDS(paste0(output_data, stage_seed, "_arista_regen.rds"))
 } else {
     
 
@@ -107,14 +103,14 @@ if (file.exists(paste0(output_data, stage_seed, "_arista_dev.rds"))) {
     isolate_territories()
 
 
-    file_out <- paste0(output_data, stage_seed, "_arista_dev.rds")
+    file_out <- paste0(output_data, stage_seed, "_arista_regen.rds")
     saveRDS(seed, file = file_out)
 }
 
 
 # QUERY
-if (file.exists(paste0(output_data, stage_query, "_arista_dev.rds"))) {
-    query <- readRDS(paste0(output_data, stage_query, "_arista_dev.rds"))
+if (file.exists(paste0(output_data, stage_query, "_arista_regen.rds"))) {
+    query <- readRDS(paste0(output_data, stage_query, "_arista_regen.rds"))
 } else {
     
     
@@ -124,7 +120,7 @@ if (file.exists(paste0(output_data, stage_query, "_arista_dev.rds"))) {
     smooth_image(dimensions = 1:20, method = c("iso", "box"), box = 10, sigma = 1, iter = 5) %>%
     segment_image(dimensions = 1:20, method = "kmeans", col_resolution = 20) %>%
     isolate_territories()
-    file_out <- paste0(output_data, stage_query, "_arista_dev.rds")
+    file_out <- paste0(output_data, stage_query, "_arista_regen.rds")
     saveRDS(query, file = file_out)
 }
 
@@ -136,12 +132,12 @@ matched <- map_assays(seed,
     signal = "variable_features",
     use_cost = use_cost,
     neighborhood = "graph",
-    depth = 2,
+    depth = 3,
     threshold = 0,
-    batch_size = 2000,
-    epochs = 20,
+    batch_size = 10000,
+    epochs = 5,
     use_norm = "raw",
     jitter = FALSE)
 
-file_out <- paste0(output_data, stage_query,"_to_",stage_seed, "_arista_dev.rds")
+file_out <- paste0(output_data, stage_query,"_to_",stage_seed, "_arista_regen.rds")
 saveRDS(matched, file = file_out)
