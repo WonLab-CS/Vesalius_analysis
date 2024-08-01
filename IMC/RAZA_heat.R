@@ -74,10 +74,13 @@ min_cost$ERBB2_pos <- status$ERBB2_pos[match(min_cost$from, status$metabric_id)]
 min_cost$DeathBreast <- status$DeathBreast[match(min_cost$from, status$metabric_id)] ==
     status$DeathBreast[match(min_cost$to, status$metabric_id)]
 
+min_cost$PAM50 <- status$PAM50[match(min_cost$from, status$metabric_id)] ==
+    status$PAM50[match(min_cost$to, status$metabric_id)]
+
 min_cost$yearsToStatus <- abs(status$yearsToStatus[match(min_cost$from, status$metabric_id)] -
     status$yearsToStatus[match(min_cost$to, status$metabric_id)])
 
-min_cost$match_cost <- apply(min_cost[,5:8],1,sum, na.rm =T) / sum(!apply(min_cost[,5:8],1,is.na))
+min_cost$match_cost <- apply(min_cost[,5:9],1,sum, na.rm =T) / sum(!apply(min_cost[,5:9],1,is.na))
 
 #-----------------------------------------------------------------------------#
 # Clinical matching - Feature
@@ -207,19 +210,20 @@ combined <- data.frame("matched" = min_cost$matched,
     "territory" = min_territory$score,
     "composition" = min_composition$score,
     "cell_label" = min_cell_label$score,
-    "cost_match" = min_cost$match_cost,
-    "feature_match" = min_feature$match_feature,
-    "niche_match" = min_niche$match_niche,
-    "territory_match" = min_territory$match_territory,
-    "composition_match" = min_composition$match_composition,
-    "cell_label_match" = min_cell_label$match_cell_label)
-combined$cost_match <- combined$cost_match * 100
+    "cost_clinical_match" = min_cost$match_cost,
+    "feature_clinical_match" = min_feature$match_feature,
+    "niche_clinical_match" = min_niche$match_niche,
+    "territory_clinical_match" = min_territory$match_territory,
+    "composition_clinical_match" = min_composition$match_composition,
+    "cell_label_clinical_match" = min_cell_label$match_cell_label)
+combined$cost_clinical_match <- combined$cost_clinical_match * 100
 score_long <- combined %>%
-    select(c("matched","cost","feature","niche","territory","composition","cell_label","cost_match"))
-ord <- order(score_long$cost_match)
-score_long <- score_long %>% pivot_longer(cols = c("cost","feature","territory" ,"niche","composition","cell_label","cost_match"))
+    select(c("matched","cost","feature","niche","territory","composition","cell_label","cost_clinical_match"))
+
+ord <- order(score_long$cost_clinical_match)
+score_long <- score_long %>% pivot_longer(cols = c("cost","feature","territory" ,"niche","composition","cell_label","cost_clinical_match"))
 score_long$name <- as.factor(score_long$name)
-score_long$name <- factor(score_long$name, levels = c("cost","feature","niche","territory","composition","cell_label","cost_match"))
+score_long$name <- factor(score_long$name, levels = c("cost","feature","niche","territory","composition","cell_label","cost_clinical_match"))
 score_long$matched <- as.factor(score_long$matched)
 score_long$matched <- factor(score_long$matched, levels = levels(score_long$matched)[ord])
 
@@ -232,7 +236,7 @@ g <- ggplot(score_long, aes(x = matched, y = name)) +
     scale_fill_gradientn(colors = brewer.pal(9, "Oranges")) +
     labs(title = "", y = "", x = "Matched Data sets", fill = "Score") +
     new_scale("fill") +
-    geom_tile(data = filter(score_long, name == "cost_match"), aes(fill = value)) +
+    geom_tile(data = filter(score_long, name == "cost_clinical_match"), aes(fill = value)) +
     labs(fill = "Clinical Out.") +
     scale_fill_gradientn(colors = brewer.pal(9, "Greens")) +
     theme_minimal() + 
@@ -255,21 +259,21 @@ dev.off()
 # Clinical outcomes for min cost 
 #-----------------------------------------------------------------------------#
 clinical_cost <- min_cost %>%
-    select(c("matched","ERStatus","Grade","ERBB2_pos","DeathBreast","yearsToStatus"))
-n_pred_values <- apply(clinical_cost[, 2:5], 2, sum, na.rm = TRUE)
-n_preds <- c(order(apply(clinical_cost[, 2:5], 2, sum, na.rm = TRUE), decreasing = TRUE),5)
-n_preds <-c("ERStatus","Grade","ERBB2_pos","DeathBreast","yearsToStatus")[n_preds]
+    select(c("matched","ERStatus","Grade","ERBB2_pos","DeathBreast","PAM50","yearsToStatus"))
+n_pred_values <- apply(clinical_cost[, 2:6], 2, sum, na.rm = TRUE)
+n_preds <- c(order(apply(clinical_cost[, 2:6], 2, sum, na.rm = TRUE), decreasing = TRUE),6)
+n_preds <-c("ERStatus","Grade","ERBB2_pos","DeathBreast","PAM50","yearsToStatus")[n_preds]
 n_pred_values <- n_pred_values[n_preds]
 ord <- order(clinical_cost[, n_preds[1]])
-ord <- order(apply(clinical_cost[,2:5],1,sum), decreasing = FALSE)
+ord <- order(apply(clinical_cost[,2:6],1,sum), decreasing = FALSE)
 clinical_cost <- clinical_cost %>%
-    pivot_longer(cols = c("ERStatus","Grade","ERBB2_pos","DeathBreast","yearsToStatus"))
+    pivot_longer(cols = c("ERStatus","Grade","ERBB2_pos","DeathBreast","PAM50","yearsToStatus"))
 clinical_cost$name <- as.factor(clinical_cost$name)
 clinical_cost$name <- factor(clinical_cost$name, levels = n_preds)
 clinical_cost$matched <- as.factor(clinical_cost$matched)
 clinical_cost$matched <- factor(clinical_cost$matched, levels = levels(clinical_cost$matched)[ord])
 
-text_format <- paste0(names(n_pred_values)," = " ,n_pred_values)[-5]
+text_format <- paste0(names(n_pred_values)," = " ,n_pred_values)[-6]
 text_format <- paste0(text_format, collapse = "\n")
 #text_format <- data.frame("x" = 6, "y" = 40, labels = text_format)
 
@@ -569,6 +573,101 @@ print(g)
 dev.off()
 
 
+cost <- read.csv(grep("cost", score_matrix,value = TRUE),
+    header = TRUE,
+    skip = 1)
+
+min_cost <- split(cost, cost$from)
+min_cost <- lapply(min_cost, function(x){
+      return(x[x$score == min(x$score),])
+    })
+min_cost <- do.call("rbind", min_cost)
+
+min_cost$ERStatus <- as.factor(status$ERStatus[match(min_cost$from, status$metabric_id)])
+min_cost$Grade <- as.factor(status$Grade[match(min_cost$from, status$metabric_id)])
+min_cost$ERBB2_pos <- as.factor(as.numeric(status$ERBB2_pos[match(min_cost$from, status$metabric_id)]))
+min_cost$DeathBreast <- as.factor(status$DeathBreast[match(min_cost$from, status$metabric_id)])
+min_cost$PAM50 <- as.factor(status$PAM50[match(min_cost$from, status$metabric_id)])
+min_cost$yearsToStatus <- as.factor(abs(status$yearsToStatus[match(min_cost$from, status$metabric_id)] -
+    status$yearsToStatus[match(min_cost$to, status$metabric_id)]))
+## for ER neg
+pos_cluster <- filter(min_cost, ERStatus == "pos")
+pos_cluster$matched <- pos_cluster$from
+pos_cluster$cluster <- as.factor(paste0("cluster_",row_order_cut))
+
+
+clinical_cost <- pos_cluster %>%
+    select(c("matched","ERStatus","Grade","ERBB2_pos","DeathBreast","PAM50","yearsToStatus", "cluster"))
+
+
+clinical_cost <- clinical_cost %>%
+    pivot_longer(cols = c("ERStatus","Grade","ERBB2_pos","DeathBreast","PAM50","yearsToStatus","cluster"))
+clinical_cost$name <- as.factor(clinical_cost$name)
+#clinical_cost$name <- factor(clinical_cost$name, levels = row_order)
+clinical_cost$matched <- as.factor(clinical_cost$matched)
+clinical_cost$matched <- factor(clinical_cost$matched, levels = levels(clinical_cost$matched)[row_order_cluster$order])
+
+PAM <- filter(clinical_cost, name == "PAM50")
+gr <- filter(clinical_cost, name == "Grade")
+er <- filter(clinical_cost, name == "ERStatus")
+# erb <- filter(clinical_cost, name == "ERBB2_pos")
+# de <- filter(clinical_cost, name == "DeathBreast")
+bin <- filter(clinical_cost, name %in% c("ERBB2_pos","DeathBreast"))
+years <- filter(clinical_cost, name == "yearsToStatus")
+clust <- filter(clinical_cost, name == "cluster")
+PAM$value <- droplevels(PAM$value)
+gr$value <- droplevels(gr$value)
+er$value <- droplevels(er$value)
+# erb$value <- droplevels(erb$value)
+# de$value <- droplevels(de$value)
+bin$value <- droplevels(bin$value)
+clust$value <- droplevels(clust$value)
+clust$value <- factor(clust$value, levels = levels(pos_cluster$cluster))
+years$value <- droplevels(years$value)
+
+
+g <- ggplot() +
+    geom_tile(data = clust, aes(x = matched, y = name,fill = as.factor(value)), color = "white",show.legend = F) +
+    scale_fill_manual(values =  cols) +
+    labs(fill = "Cluster") +
+    theme(legend.postion = "right")+
+    new_scale("fill") +
+    geom_tile(data = PAM, aes(x = matched, y = name,fill = as.factor(value)), color = "white") +
+    scale_fill_manual(values =  brewer.pal(length(levels(PAM$value)), "Set1")) +
+    labs(title = "", y = "", x = "Matched Data sets", fill = "PAM50") +
+    new_scale("fill") +
+    geom_tile(data = gr, aes(x = matched, y = name,fill = as.factor(value)), color = "white") +
+    scale_fill_manual(values =  brewer.pal(length(levels(gr$value)), "Greens")) +
+    labs(fill = "Grade") +
+    new_scale("fill") +
+    geom_tile(data = bin, aes(x = matched, y = name,fill = as.factor(value)), color = "white") +
+    scale_fill_manual(values =  rev(brewer.pal(length(levels(bin$value)), "Purples"))) +
+    labs(fill = "Boolean") +
+    new_scale("fill") +
+    # geom_tile(data = de, aes(x = matched, y = name,fill = as.factor(value)), color = "white") +
+    # scale_fill_manual(values =  c("#978c8c","black")) +
+    # labs(fill = "Death Breast") +
+    # new_scale("fill") +
+    geom_tile(data = years, aes(x = matched, y = name,fill = as.numeric(value)), color = "white") +
+    labs(fill = "Delta Years To Status") +
+    theme_minimal() + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 9),
+        legend.position = "top",
+        legend.title = element_text(size = 18),
+        axis.text.y = element_text(size = 18),
+        axis.title = element_text(size = 15),
+        legend.text = element_text(size = 14),
+        plot.title  = element_text(size = 18),
+        plot.tag.position = c(0.92, 0.2),
+        plot.margin = unit(c(0.5, 1, 0.5, 1), 
+                                "inches")) +
+    guides(colour = guide_legend(
+        override.aes = list(linewidth = 5))) 
+
+file_out <- paste0(output_plots,"ER_pos_clinical_outcomes_by_cluster.pdf")
+pdf(file_out, height = 6, width=20)
+print(g)
+dev.off()
     
 #-----------------------------------------------------------------------------#
 # ER NEG
@@ -844,48 +943,103 @@ dev.off()
 
 
 
-# #-----------------------------------------------------------------------------#
-# # Showing status
-# #-----------------------------------------------------------------------------#
-# full_df <- do.call("rbind", full_df)
-# full_df$metabric_id <- full_df$from
-# status <- left_join(full_df, status, by = "metabric_id")
 
-# er <- split(status, status$type)
-# bar <- vector("list", length(er))
-# for (i in seq_along(er)){
-#     tmp <- er[[i]]
-#     clust <- unique(tmp$clust)
-#     tmp$status_tab <- 0
-#     tmp$q <- 0
-#     tmp$ord <- 0
-#     for (j in seq_along(clust)){
-#         tot <- sum(tmp$clust == clust[j])
-#         pos <- which(tmp$clust == clust[j] & tmp$ERStatus == "pos")
-#         tmp$status_tab[pos] <- (length(pos) / tot) * 100
-#         tmp$q[pos[1]] <- 1 
-#         neg <- which(tmp$clust == clust[j] & tmp$ERStatus == "neg")
-#         tmp$status_tab[neg] <- (length(neg) / tot) * 100
-#         tmp$q[neg[1]] <- 1
-#         tmp$ord[tmp$clust == clust[j]]<- (length(pos) / tot) - (length(neg) / tot)
-        
-#     }
-#     tmp <- tmp[tmp$q == 1,]
-#     tmp$clust <- factor(tmp$clust, levels = unique(tmp$clust[order(tmp$ord, decreasing = TRUE)]))
-#     bar[[i]] <- ggplot(tmp, aes(fill=ERStatus, y=status_tab, x=clust)) + 
-#     geom_bar(position = "stack", stat = "identity") +
-#     scale_fill_manual(values = c("#D55E00", "#0072B2")) + 
-#     theme_bw() +
-#     labs(x = "Cluster", y = "ER Status Distribution", title = unique(tmp$type)) +
-#      theme(legend.title = element_text(size = 15),
-#             axis.text = element_text(size = 12),
-#             axis.title = element_text(size = 15),
-#             legend.text = element_text(size = 15),
-#             plot.title  = element_text(size = 18))
-# }
+#-----------------------------------------------------------------------------#
+# map of clinical outcomes by cluster 
+#-----------------------------------------------------------------------------#
 
-# file_name <- paste0(output_plots, "cluster_distribution.pdf")
-# pdf(file_name, width = 16, height = 12)
-# ggarrange(plotlist = bar, ncol = 3, nrow=2)
-# dev.off()
+cost <- read.csv(grep("cost", score_matrix,value = TRUE),
+    header = TRUE,
+    skip = 1)
 
+min_cost <- split(cost, cost$from)
+min_cost <- lapply(min_cost, function(x){
+      return(x[x$score == min(x$score),])
+    })
+min_cost <- do.call("rbind", min_cost)
+
+min_cost$ERStatus <- as.factor(status$ERStatus[match(min_cost$from, status$metabric_id)])
+min_cost$Grade <- as.factor(status$Grade[match(min_cost$from, status$metabric_id)])
+min_cost$ERBB2_pos <- as.factor(as.numeric(status$ERBB2_pos[match(min_cost$from, status$metabric_id)]))
+min_cost$DeathBreast <- as.factor(status$DeathBreast[match(min_cost$from, status$metabric_id)])
+min_cost$PAM50 <- as.factor(status$PAM50[match(min_cost$from, status$metabric_id)])
+min_cost$yearsToStatus <- as.factor(abs(status$yearsToStatus[match(min_cost$from, status$metabric_id)] -
+    status$yearsToStatus[match(min_cost$to, status$metabric_id)]))
+## for ER neg
+neg_cluster <- filter(min_cost, ERStatus == "neg")
+neg_cluster$matched <- neg_cluster$from
+neg_cluster$cluster <- as.factor(paste0("cluster_",row_order_cut))
+
+
+clinical_cost <- neg_cluster %>%
+    select(c("matched","ERStatus","Grade","ERBB2_pos","DeathBreast","PAM50","yearsToStatus", "cluster"))
+
+
+clinical_cost <- clinical_cost %>%
+    pivot_longer(cols = c("ERStatus","Grade","ERBB2_pos","DeathBreast","PAM50","yearsToStatus","cluster"))
+clinical_cost$name <- as.factor(clinical_cost$name)
+#clinical_cost$name <- factor(clinical_cost$name, levels = row_order)
+clinical_cost$matched <- as.factor(clinical_cost$matched)
+clinical_cost$matched <- factor(clinical_cost$matched, levels = levels(clinical_cost$matched)[row_order_cluster$order])
+
+PAM <- filter(clinical_cost, name == "PAM50")
+gr <- filter(clinical_cost, name == "Grade")
+er <- filter(clinical_cost, name == "ERStatus")
+# erb <- filter(clinical_cost, name == "ERBB2_pos")
+# de <- filter(clinical_cost, name == "DeathBreast")
+bin <- filter(clinical_cost, name %in% c("ERBB2_pos","DeathBreast"))
+years <- filter(clinical_cost, name == "yearsToStatus")
+clust <- filter(clinical_cost, name == "cluster")
+PAM$value <- droplevels(PAM$value)
+gr$value <- droplevels(gr$value)
+er$value <- droplevels(er$value)
+# erb$value <- droplevels(erb$value)
+# de$value <- droplevels(de$value)
+bin$value <- droplevels(bin$value)
+clust$value <- droplevels(clust$value)
+clust$value <- factor(clust$value, levels = levels(neg_cluster$cluster)[c(1,7:14,2:6)])
+years$value <- droplevels(years$value)
+
+
+g <- ggplot() +
+    geom_tile(data = clust, aes(x = matched, y = name,fill = as.factor(value)), color = "white",show.legend = F) +
+    scale_fill_manual(values =  cols) +
+    labs(fill = "Cluster") +
+    theme(legend.postion = "right")+
+    new_scale("fill") +
+    geom_tile(data = PAM, aes(x = matched, y = name,fill = as.factor(value)), color = "white") +
+    scale_fill_manual(values =  brewer.pal(length(levels(PAM$value)), "Set1")) +
+    labs(title = "", y = "", x = "Matched Data sets", fill = "PAM50") +
+    new_scale("fill") +
+    geom_tile(data = gr, aes(x = matched, y = name,fill = as.factor(value)), color = "white") +
+    scale_fill_manual(values =  brewer.pal(length(levels(gr$value)), "Greens")) +
+    labs(fill = "Grade") +
+    new_scale("fill") +
+    geom_tile(data = bin, aes(x = matched, y = name,fill = as.factor(value)), color = "white") +
+    scale_fill_manual(values =  rev(brewer.pal(length(levels(bin$value)), "Purples"))) +
+    labs(fill = "Boolean") +
+    new_scale("fill") +
+    # geom_tile(data = de, aes(x = matched, y = name,fill = as.factor(value)), color = "white") +
+    # scale_fill_manual(values =  c("#978c8c","black")) +
+    # labs(fill = "Death Breast") +
+    # new_scale("fill") +
+    geom_tile(data = years, aes(x = matched, y = name,fill = as.numeric(value)), color = "white") +
+    labs(fill = "Delta Years To Status") +
+    theme_minimal() + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 9),
+        legend.position = "top",
+        legend.title = element_text(size = 18),
+        axis.text.y = element_text(size = 18),
+        axis.title = element_text(size = 15),
+        legend.text = element_text(size = 14),
+        plot.title  = element_text(size = 18),
+        plot.tag.position = c(0.92, 0.2),
+        plot.margin = unit(c(0.5, 1, 0.5, 1), 
+                                "inches")) +
+    guides(colour = guide_legend(
+        override.aes = list(linewidth = 5))) 
+
+file_out <- paste0(output_plots,"ER_neg_clinical_outcomes_by_cluster.pdf")
+pdf(file_out, height = 6, width=20)
+print(g)
+dev.off()
