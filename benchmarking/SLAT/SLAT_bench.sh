@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=paste
+#SBATCH --job-name=slat
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
@@ -12,8 +12,7 @@
 #SBATCH -p defq
 
 source /home/martinp4/anaconda3/etc/profile.d/conda.sh
-conda activate paste
-cd common/
-python /common/martinp4/benchmarking_out/PASTE/pipeline/PASTE_bench.py $SLURM_ARRAY_TASK_ID "circle"
-python /common/martinp4/benchmarking_out/PASTE/pipeline/PASTE_bench.py $SLURM_ARRAY_TASK_ID "layered"
+conda activate slat
+python /common/martinp4/benchmarking_out/SLAT/pipeline/SLAT_bench.py $SLURM_ARRAY_TASK_ID "circle"
+python /common/martinp4/benchmarking_out/SLAT/pipeline/SLAT_bench.py $SLURM_ARRAY_TASK_ID "layered"
 conda deactivate
