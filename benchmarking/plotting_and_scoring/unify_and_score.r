@@ -27,7 +27,6 @@ library(spatstat.utils, lib.loc = "/common/martinp4/R")
 
 library(vesalius, lib.loc = "/common/martinp4/R")
 set.seed(1547)
-
 plan(multicore, workers = 10)
 max_size <- 10000 * 1024^2
 options(future.globals.maxSize = max_size)
