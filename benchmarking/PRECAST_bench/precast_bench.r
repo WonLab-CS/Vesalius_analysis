@@ -13,8 +13,8 @@ set.seed(1547)
 #-----------------------------------------------------------------------------#
 input <- "/common/wonklab/synthetic_spatial"
 
-if(!dir.exists("/common/martinp4/benchmarking_out/Vesalius/synthetic/")){
-    dir.create("/common/martinp4/benchmarking_out/Vesalius/synthetic/")
+if(!dir.exists("/common/martinp4/benchmarking_out/precast/report/")){
+    dir.create("/common/martinp4/benchmarking_out/precast/report/")
 }
 output_data <- "/common/martinp4/benchmarking_out/precast/report/"
 cat("Output setup: DONE \n")
@@ -24,38 +24,23 @@ cat("Output setup: DONE \n")
 # is no guarantee that cluster labels will recover cell type labels 
 #-----------------------------------------------------------------------------#
 
-assign_cluster <- function(clusters, query, seed, counts = NULL, method = "sort") {
-    query <- switch(EXPR = method,
-        "sort" = sort_cluster(clusters, query),
-        "dist" = dist_cluster(clusters, query, counts))
-    query <- assign_coord(query, seed)
-    return(query)
-}
-
-sort_cluster <- function(clusters, query) {
-    query_cluster <- sort(table(clusters))
-    query_cell_labels <- sort(table(query$cell_labels))
-    for (i in seq_along(query_cluster)) {
-        locs_query <- query_cluster == names(query_cluster)[i]
-        query$cell_labels[locs_query] <- names(query_cell_labels)[i]
+assign_cluster <- function(reslist, query, seed) {
+    query$cluster <- unlist(reslist[[1]]$cluster[2,])
+    seed$cluster <- unlist(reslist[[1]]$cluster[1,])
+    query <- split(query, query$cluster)
+    seed <- split(seed, seed$cluster)
+    clusters <- names(query)
+    for (i in seq_along(clusters)){
+        tmp <- seed[[clusters[i]]]
+        query[[i]]$col <- sample(tmp$col, size = nrow(query[[i]]), replace = TRUE)
+        query[[i]]$row <- sample(tmp$row, size = nrow(query[[i]]), replace = TRUE)
     }
-    return(query)
-
-}
-
-# Assigning random coordinates from the matched cell label
-assign_coord <- function(query, seed) {
-    locs <- rep(0, nrow(query))
-    cell_labels <- unique(query$cell_labels)
-    for (i in seq_along(cell_labels)) {
-        q_locs <- which(query$cell_labels == cell_labels[i])
-        s_locs <- which(seed$cell_labels == cell_labels[i])
-        locs[q_locs] <- sample(s_locs, size = length(q_locs), replace = TRUE)
-    }
-    query$col <- seed$col[locs]
-    query$row <- seed$row[locs]
+    query <- do.call("rbind", query)
+    query <- query[, c("barcodes", "col","row","cluster")]
+    colnames(query) <- c("barcodes","x","y","cell_labels")
     return(query)
 }
+
 
 #-----------------------------------------------------------------------------#
 # Data set up 
@@ -123,17 +108,16 @@ precast <- PRECAST::CreatePRECASTObject(seuList = object_list,
 precast <-  PRECAST::AddAdjList(precast, platform = "Visium")
 precast <- PRECAST::AddParSetting(precast,
     Sigma_equal = FALSE,
-    maxIter = 30,
+    maxIter = 20,
     verbose = TRUE,
     coreNum = 1)
 
-precast <- PRECAST::PRECAST(precast, K = length(unique(ref_coord$cell_labels)))
+precast <- PRECAST::PRECAST(precast, K = 12) 
 reslist <- precast@resList
 precast <- PRECAST::SelectModel(precast)
 
-query_tmp <- assign_cluster(unlist(reslist[[1]]$cluster[2,]),query_coord, ref_coord)
-query_tmp <- query_tmp[,c("barcodes", "col","row","cell_labels")]
-colnames(query_tmp) <- c("barcodes","x","y","cell_labels")
+query_tmp <- assign_cluster(reslist,query_coord, ref_coord)
+
 
 
 ref_tag <- gsub(".csv","", tag[i])

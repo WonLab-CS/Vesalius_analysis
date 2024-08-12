@@ -29,6 +29,7 @@ output <- "/common/martinp4/benchmarking_out/report/"
 #-----------------------------------------------------------------------------#
 file_name <- paste0(output,"benchmarking_scores.csv")
 scores <- read.csv(file_name)
+scores$Method <- gsub("synthetic/","", scores$Method)
 scores$X <- NULL
 
 #-----------------------------------------------------------------------------#
@@ -36,7 +37,7 @@ scores$X <- NULL
 #-----------------------------------------------------------------------------#
 ari <- ggplot(scores, aes(x = Method, y = ARI, fill = Method)) +
     geom_violin() +
-    scale_fill_manual(values =c("#1a6ea7ff","#146269ff","#b75b1cff","#8e0703ff")) +
+    scale_fill_manual(values =c("#08324e","#1a6ea7ff","#146269ff","#51b090","#de9c71","#b75b1cff","#8e0703ff")) +
     theme_bw() +
     theme(strip.background =element_rect(fill="#082233ff"),
         strip.text = element_text(colour = 'white', size = 15),
@@ -47,14 +48,14 @@ ari <- ggplot(scores, aes(x = Method, y = ARI, fill = Method)) +
         axis.text.x = element_text(size = 12, angle = 45, hjust = 1,vjust =1)) +
     facet_wrap(~Regime)
 file_out <- paste0(output, "benchmarking_ARI.pdf")
-pdf(file_out, width = 6, height = 4)
+pdf(file_out, width = 8, height = 4)
 print(ari)
 dev.off()
 
 
 vi <- ggplot(scores, aes(x = Method, y = VI, fill = Method)) +
     geom_violin() +
-    scale_fill_manual(values =c("#1a6ea7ff","#146269ff","#b75b1cff","#8e0703ff")) +
+    scale_fill_manual(values =c("#08324e","#1a6ea7ff","#146269ff","#51b090","#de9c71","#b75b1cff","#8e0703ff")) +
     theme_bw() +
     theme(strip.background =element_rect(fill="#082233ff"),
         strip.text = element_text(colour = 'white', size = 15),
@@ -65,13 +66,13 @@ vi <- ggplot(scores, aes(x = Method, y = VI, fill = Method)) +
         axis.text.x = element_text(size = 12, angle = 45, hjust = 1,vjust =1)) +
     facet_wrap(~Regime)
 file_out <- paste0(output, "benchmarking_VI.pdf")
-pdf(file_out, width = 6, height = 4)
+pdf(file_out, width = 8, height = 4)
 print(vi)
 dev.off()
 
 mse <- ggplot(scores, aes(x = Method, y = RMSE, fill = Method)) +
     geom_violin() +
-    scale_fill_manual(values =c("#1a6ea7ff","#146269ff","#b75b1cff","#8e0703ff")) +
+    scale_fill_manual(values =c("#08324e","#1a6ea7ff","#146269ff","#51b090","#de9c71","#b75b1cff","#8e0703ff")) +
     theme_bw() +
     theme(strip.background =element_rect(fill="#082233ff"),
         strip.text = element_text(colour = 'white', size = 15),
@@ -82,13 +83,14 @@ mse <- ggplot(scores, aes(x = Method, y = RMSE, fill = Method)) +
         axis.text.x = element_text(size = 12, angle = 45, hjust = 1,vjust =1)) +
     facet_wrap(~Regime)
 file_out <- paste0(output, "benchmarking_RMSE.pdf")
-pdf(file_out, width = 6, height = 4)
+pdf(file_out, width = 8, height = 4)
 print(mse)
 dev.off()
 
 #-----------------------------------------------------------------------------#
 # Get best matching
 #-----------------------------------------------------------------------------#
+
 best_circle <- scores[scores$Method == "Vesalius" & scores$Regime == "circle",]
 best_circle <- best_circle[best_circle$ARI == max(best_circle$ARI), ]
 
@@ -175,7 +177,7 @@ all_data_layered <- rbind(ref_layered, query_layered, matched)
 all_data_circle$cell_labels <- as.factor(all_data_circle$cell_labels)
 all_data_circle$Method <- as.factor(all_data_circle$Method)
 all_data_circle$Method <- factor(all_data_circle$Method,
-    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","PASTE"))
+    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","PRECAST","SLAT","PASTE","GPSA"))
 cols <- colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))
 cols <- cols(length(levels(all_data_circle$cell_labels)))
 g1 <- ggplot(all_data_circle, aes(x = x, y = y, col = cell_labels)) +
@@ -200,7 +202,7 @@ dev.off()
 all_data_layered$cell_labels <- as.factor(all_data_layered$cell_labels)
 all_data_layered$Method <- as.factor(all_data_layered$Method)
 all_data_layered$Method <- factor(all_data_layered$Method,
-    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","PASTE"))
+    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","PRECAST","SLAT","PASTE","GPSA"))
 cols <- colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))
 cols <- cols(length(levels(all_data_layered$cell_labels)))
 g1 <- ggplot(all_data_layered, aes(x = x, y = y, col = cell_labels)) +

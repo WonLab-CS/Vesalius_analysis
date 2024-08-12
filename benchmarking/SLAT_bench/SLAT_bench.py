@@ -44,12 +44,13 @@ def load_sim(input_path, file):
     return adata
 
 def export_match(seed, query, matched, output_path, tag):
-    spa = seed[['x','y']]
-    spa = spa = spa.set_axis(query.index.values, axis = 0)
+    spa = pd.DataFrame(seed[['x','y']])
+    spa = spa.iloc[matched[1]]
+    spa = spa.set_axis(query.index.values, axis = 0)
     barcodes = pd.DataFrame(query.index.values)
     barcodes = barcodes.set_axis(query.index.values, axis = 0)
     barcodes = barcodes.set_axis(['barcodes'], axis = 1)
-    best_match = query['cell_labels'][matched[1]]
+    best_match = query['cell_labels']
     best_match = best_match.set_axis(query.index.values,axis =0)
     export_adata = pd.concat([barcodes, spa, best_match], axis = 1)
     export_file = os.path.join(output_path, tag)
@@ -71,21 +72,21 @@ def main():
     query = load_sim("/common/wonklab/synthetic_spatial", files[1])
     Cal_Spatial_Net(seed, k_cutoff=10, model='KNN')
     Cal_Spatial_Net(query, k_cutoff=10, model='KNN')
-    edges, features = load_anndatas([seed, query], feature='DPCA')
+    edges, features = load_anndatas([query, seed], feature='DPCA')
     embd0, embd1, time = run_SLAT(features, edges)
-    best, index, distance = spatial_match(features, adatas=[seed,query], reorder=False)
-    adata1_df = pd.DataFrame({'index': range(embd0.shape[0]),
+    best, index, distance = spatial_match(features, adatas=[query,seed], reorder=False)
+    seed = pd.DataFrame({'index': range(embd1.shape[0]),
                         'x': seed.obsm['spatial'][:,0],
                         'y': seed.obsm['spatial'][:,1],
                         'cell_labels': seed.obs['cell_labels']})
-    adata2_df = pd.DataFrame({'index': range(embd1.shape[0]),
+    query = pd.DataFrame({'index': range(embd0.shape[0]),
                         'x': query.obsm['spatial'][:,0],
                         'y': query.obsm['spatial'][:,1],
                         'cell_labels': query.obs['cell_labels']})
-    matching = np.array([range(index.shape[0]), best])
+    matched = np.array([range(index.shape[0]), best])
     tag = f'SLAT_aligned_{re.sub(".csv","",files[0][0])}_{re.sub(".csv","",files[1][0])}.csv'
     tag = re.sub('spatial_territories_gene_counts_','',tag)
-    export_match(adata1_df,adata2_df, matching, output_path, tag)
+    export_match(seed,query, matched, output_path, tag)
     return 0
 
 if __name__ == "__main__":
