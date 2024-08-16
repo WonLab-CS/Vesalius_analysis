@@ -36,7 +36,8 @@ scores$X <- NULL
 # Plot - scores
 #-----------------------------------------------------------------------------#
 ari <- ggplot(scores, aes(x = Method, y = ARI, fill = Method)) +
-    geom_violin() +
+    geom_boxplot() +
+    #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.1) +
     scale_fill_manual(values =c("#08324e","#1a6ea7ff","#146269ff","#51b090","#de9c71","#b75b1cff","#8e0703ff")) +
     theme_bw() +
     theme(strip.background =element_rect(fill="#082233ff"),
@@ -54,7 +55,8 @@ dev.off()
 
 
 vi <- ggplot(scores, aes(x = Method, y = VI, fill = Method)) +
-    geom_violin() +
+    geom_boxplot() +
+    #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.1) +
     scale_fill_manual(values =c("#08324e","#1a6ea7ff","#146269ff","#51b090","#de9c71","#b75b1cff","#8e0703ff")) +
     theme_bw() +
     theme(strip.background =element_rect(fill="#082233ff"),
@@ -71,7 +73,8 @@ print(vi)
 dev.off()
 
 mse <- ggplot(scores, aes(x = Method, y = RMSE, fill = Method)) +
-    geom_violin() +
+    geom_boxplot() +
+    #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.1) +
     scale_fill_manual(values =c("#08324e","#1a6ea7ff","#146269ff","#51b090","#de9c71","#b75b1cff","#8e0703ff")) +
     theme_bw() +
     theme(strip.background =element_rect(fill="#082233ff"),
@@ -133,14 +136,16 @@ matched <- mapply(function(f,tag){
     f$Method <- tag
     f$barcodes <- gsub("q_","", f$barcodes)
     f$cell_labels <- gsub("celltype_","",f$cell_labels)
+    f$cluster <- NULL
     rownames(f) <- NULL
+    colnames(f) <- c("barcodes","x","y","cell_labels","Method")
     return(f)
 }, matched, methods, SIMPLIFY = FALSE)
 matched <- do.call("rbind", matched)
 rownames(matched) <- NULL
 
 all_data_circle <- rbind(ref_circle, query_circle, matched)
-
+all_data_circle$Method[all_data_circle$Method == "precast"] <- "PRECAST"
 
 ### Layered
 ref_layered <- ref_path[grepl("layered",ref_path) &
@@ -163,13 +168,16 @@ matched <- mapply(function(f,tag){
     f$Method <- tag
     f$barcodes <- gsub("q_","", f$barcodes)
     f$cell_labels <- gsub("celltype_","",f$cell_labels)
+    f$cluster <- NULL
     rownames(f) <- NULL
+    colnames(f) <- c("barcodes","x","y","cell_labels","Method")
     return(f)
 }, matched, methods, SIMPLIFY = FALSE)
 matched <- do.call("rbind", matched)
 rownames(matched) <- NULL
 
 all_data_layered <- rbind(ref_layered, query_layered, matched)
+all_data_layered$Method[all_data_layered$Method == "precast"] <- "PRECAST"
 
 #-----------------------------------------------------------------------------#
 # Plot - best matched
@@ -177,7 +185,7 @@ all_data_layered <- rbind(ref_layered, query_layered, matched)
 all_data_circle$cell_labels <- as.factor(all_data_circle$cell_labels)
 all_data_circle$Method <- as.factor(all_data_circle$Method)
 all_data_circle$Method <- factor(all_data_circle$Method,
-    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","PRECAST","SLAT","PASTE","GPSA"))
+    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","SLAT","PASTE","GPSA","PRECAST"))
 cols <- colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))
 cols <- cols(length(levels(all_data_circle$cell_labels)))
 g1 <- ggplot(all_data_circle, aes(x = x, y = y, col = cell_labels)) +
@@ -202,7 +210,7 @@ dev.off()
 all_data_layered$cell_labels <- as.factor(all_data_layered$cell_labels)
 all_data_layered$Method <- as.factor(all_data_layered$Method)
 all_data_layered$Method <- factor(all_data_layered$Method,
-    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","PRECAST","SLAT","PASTE","GPSA"))
+    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","SLAT","PASTE","GPSA","PRECAST"))
 cols <- colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))
 cols <- cols(length(levels(all_data_layered$cell_labels)))
 g1 <- ggplot(all_data_layered, aes(x = x, y = y, col = cell_labels)) +

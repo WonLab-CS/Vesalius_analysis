@@ -13,4 +13,3 @@ module load rlibs/4.2.1
 module load hdf5
 Rscript /common/martinp4/benchmarking_out/pipeline/unify_and_score.r
 Rscript /common/martinp4/benchmarking_out/pipeline/unify_plot.r
-

@@ -25,19 +25,21 @@ cat("Output setup: DONE \n")
 #-----------------------------------------------------------------------------#
 
 assign_cluster <- function(reslist, query, seed) {
-    query$cluster <- unlist(reslist[[1]]$cluster[2,])
-    seed$cluster <- unlist(reslist[[1]]$cluster[1,])
+    query$cluster <- unlist(reslist$cluster[2,])
+    seed$cluster <- unlist(reslist$cluster[1,])
     query <- split(query, query$cluster)
     seed <- split(seed, seed$cluster)
     clusters <- names(query)
     for (i in seq_along(clusters)){
         tmp <- seed[[clusters[i]]]
-        query[[i]]$col <- sample(tmp$col, size = nrow(query[[i]]), replace = TRUE)
-        query[[i]]$row <- sample(tmp$row, size = nrow(query[[i]]), replace = TRUE)
+        locs <- sample(seq_len(nrow(tmp)),size = nrow(query[[i]]), replace = TRUE)
+        query[[i]]$col <- tmp$col[locs]
+        query[[i]]$row <- tmp$row[locs]
+        #query[[i]]$cell_labels <- tmp$cell_labels[locs]
     }
     query <- do.call("rbind", query)
-    query <- query[, c("barcodes", "col","row","cluster")]
-    colnames(query) <- c("barcodes","x","y","cell_labels")
+    query <- query[, c("barcodes", "col","row","cell_labels","cluster")]
+    #colnames(query) <- c("barcodes","x","y","cell_labels","cluster")
     return(query)
 }
 
@@ -105,16 +107,24 @@ precast <- PRECAST::CreatePRECASTObject(seuList = object_list,
 #-----------------------------------------------------------------------------#
 # Run PRECAST
 #-----------------------------------------------------------------------------#
-precast <-  PRECAST::AddAdjList(precast, platform = "Visium")
+precast <-  PRECAST::AddAdjList(precast,
+    platform = "Other_SRT",
+    type = "fixed_number")
 precast <- PRECAST::AddParSetting(precast,
     Sigma_equal = FALSE,
-    maxIter = 20,
+    maxIter = 5,
     verbose = TRUE,
     coreNum = 1)
 
-precast <- PRECAST::PRECAST(precast, K = 12) 
+buffer <- try(PRECAST::PRECAST(precast, K = 5:15),silent = TRUE)
+if (is(buffer, "try-error")){
+    buffer <- PRECAST::PRECAST(precast, K = c(5,12,15))
+}
+if (is(buffer, "try-error")){
+    q("no")
+}
+precast <- PRECAST::SelectModel(buffer)
 reslist <- precast@resList
-precast <- PRECAST::SelectModel(precast)
 
 query_tmp <- assign_cluster(reslist,query_coord, ref_coord)
 

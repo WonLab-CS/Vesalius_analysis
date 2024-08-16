@@ -76,6 +76,9 @@ score_cell_match <- function(file, file_tag, data_path) {
     query_counts$genes <- NULL
     matched <- read.csv(file)
     matched <- matched[,-1]
+    if (any(colnames(matched) %in% c("row","col"))){
+        colnames(matched) <- c("barcodes","x","y","cluster","cell_labels")
+    }
     matched$barcodes <- gsub("q_","", matched$barcodes)
     matched$cell_labels <- gsub("celltype_","",matched$cell_labels)
     matched_locs <- RANN::nn2(data = ref_coord[,c("x", "y")],

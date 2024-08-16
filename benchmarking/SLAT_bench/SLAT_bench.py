@@ -43,9 +43,9 @@ def load_sim(input_path, file):
     adata.obs['cell_labels'] = coord['cell_labels'].to_numpy()
     return adata
 
-def export_match(seed, query, matched, output_path, tag):
+def export_match(seed, query, best, output_path, tag):
     spa = pd.DataFrame(seed[['x','y']])
-    spa = spa.iloc[matched[1]]
+    spa = spa.iloc[best]
     spa = spa.set_axis(query.index.values, axis = 0)
     barcodes = pd.DataFrame(query.index.values)
     barcodes = barcodes.set_axis(query.index.values, axis = 0)
@@ -55,6 +55,7 @@ def export_match(seed, query, matched, output_path, tag):
     export_adata = pd.concat([barcodes, spa, best_match], axis = 1)
     export_file = os.path.join(output_path, tag)
     export_adata.to_csv(export_file)
+    return export_adata
 
 #-----------------------------------------------------------------------------#
 # Main 
@@ -73,8 +74,8 @@ def main():
     Cal_Spatial_Net(seed, k_cutoff=10, model='KNN')
     Cal_Spatial_Net(query, k_cutoff=10, model='KNN')
     edges, features = load_anndatas([query, seed], feature='DPCA')
-    embd0, embd1, time = run_SLAT(features, edges)
-    best, index, distance = spatial_match(features, adatas=[query,seed], reorder=False)
+    embd0, embd1, time = run_SLAT(features, edges,epochs = 20,LGCN_layer=5)
+    best, index, distance = spatial_match([embd0,embd1], adatas=[query,seed], reorder=False)
     seed = pd.DataFrame({'index': range(embd1.shape[0]),
                         'x': seed.obsm['spatial'][:,0],
                         'y': seed.obsm['spatial'][:,1],
@@ -83,11 +84,11 @@ def main():
                         'x': query.obsm['spatial'][:,0],
                         'y': query.obsm['spatial'][:,1],
                         'cell_labels': query.obs['cell_labels']})
-    matched = np.array([range(index.shape[0]), best])
     tag = f'SLAT_aligned_{re.sub(".csv","",files[0][0])}_{re.sub(".csv","",files[1][0])}.csv'
     tag = re.sub('spatial_territories_gene_counts_','',tag)
-    export_match(seed,query, matched, output_path, tag)
+    export_match(seed,query, best, output_path, tag)
     return 0
 
 if __name__ == "__main__":
     main()
+    
