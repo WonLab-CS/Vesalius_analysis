@@ -15,3 +15,4 @@ module load R/4.2.1
 module load rlibs/4.2.1
 Rscript /common/martinp4/benchmarking_out/precast/pipeline/precast_bench.r $SLURM_ARRAY_TASK_ID "circle"
 Rscript /common/martinp4/benchmarking_out/precast/pipeline/precast_bench.r $SLURM_ARRAY_TASK_ID "layered"
+Rscript /common/martinp4/benchmarking_out/precast/pipeline/precast_bench.r $SLURM_ARRAY_TASK_ID "dropped"

@@ -112,13 +112,13 @@ precast <-  PRECAST::AddAdjList(precast,
     type = "fixed_number")
 precast <- PRECAST::AddParSetting(precast,
     Sigma_equal = FALSE,
-    maxIter = 5,
+    maxIter = 20,
     verbose = TRUE,
     coreNum = 1)
 
-buffer <- try(PRECAST::PRECAST(precast, K = 5:15),silent = TRUE)
+buffer <- try(PRECAST::PRECAST(precast, K = 6:15),silent = TRUE)
 if (is(buffer, "try-error")){
-    buffer <- PRECAST::PRECAST(precast, K = c(5,12,15))
+    buffer <- PRECAST::PRECAST(precast, K = 10:13)
 }
 if (is(buffer, "try-error")){
     q("no")

@@ -116,7 +116,7 @@ def main():
         }
     }
     
-    N_EPOCHS = 10
+    N_EPOCHS = 20
     model = VariationalGPSA(
         data_dict,
         n_spatial_dims=2,

@@ -15,4 +15,5 @@ source /home/martinp4/anaconda3/etc/profile.d/conda.sh
 conda activate gpsa
 python /common/martinp4/benchmarking_out/GPSA/pipeline/GPSA_bench.py $SLURM_ARRAY_TASK_ID "circle"
 python /common/martinp4/benchmarking_out/GPSA/pipeline/GPSA_bench.py $SLURM_ARRAY_TASK_ID "layered"
+python /common/martinp4/benchmarking_out/GPSA/pipeline/GPSA_bench.py $SLURM_ARRAY_TASK_ID "dropped"
 conda deactivate
