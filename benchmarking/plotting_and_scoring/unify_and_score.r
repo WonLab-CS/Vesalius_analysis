@@ -43,13 +43,7 @@ data_path <- "/common/wonklab/synthetic_spatial/"
 #-----------------------------------------------------------------------------#
 # Funks
 #-----------------------------------------------------------------------------#
-rmse <- function(ref, matched) {
-    ref <- as.vector(as.matrix(ref))
-    matched <- as.vector(as.matrix(matched))
-    mse <- mean(ref - matched) ^ 2
-    rmse <- sqrt(mse)
-    return(rmse)
-}
+
 
 score_cell_match <- function(file, file_tag, data_path) {
     cat(file_tag)
@@ -69,32 +63,40 @@ score_cell_match <- function(file, file_tag, data_path) {
     query_path <- path[grepl(paste0("sample_",query,".csv"),path) &
         grepl(regime,path)]
     ref_coord <- read.csv(ref_path[2L])
-    ref_counts <- read.csv(ref_path[1L], row.names = 1)
-    ref_counts$genes <- NULL
     query_coord <- read.csv(query_path[2L])
-    query_counts <- read.csv(query_path[1L],row.names =1)
-    query_counts$genes <- NULL
     matched <- read.csv(file)
     matched <- matched[,-1]
     if (any(colnames(matched) %in% c("row","col"))){
-        colnames(matched) <- c("barcodes","x","y","cluster","cell_labels")
-    }
-    matched$barcodes <- gsub("q_","", matched$barcodes)
-    matched$cell_labels <- gsub("celltype_","",matched$cell_labels)
-    matched_locs <- RANN::nn2(data = ref_coord[,c("x", "y")],
+        if(length(grep("cluster_query|cluster_ref", colnames(matched))) ==0){
+            #skpping these ones since these were produced using old
+            # approach and will not have new columns
+            # also means these data sets didn't run
+            # just didn't remove from directory before re-running
+            return(NULL)
+        }
+        ari_1 <- adjustedRandIndex(ref_coord$cell_labels, matched$cluster_ref)
+        ari_2 <- adjustedRandIndex(query_coord$cell_labels, matched$cluster_query)
+        vi_1 <- vi.dist(ref_coord$cell_labels, matched$cluster_ref)
+        vi_2 <- vi.dist(query_coord$cell_labels, matched$cluster_query)
+        ari <- mean(c(ari_1,ari_2))
+        vi <- mean(c(vi_1,vi_2))
+    } else {
+        matched$barcodes <- gsub("q_","", matched$barcodes)
+        matched$cell_labels <- gsub("celltype_","",matched$cell_labels)
+        matched_locs <- RANN::nn2(data = ref_coord[,c("x", "y")],
         query = matched[,c("x","y")],
         k = 1)$nn.idx[,1]
-    ref_coord <- ref_coord[matched_locs,]
-    ari <- adjustedRandIndex(ref_coord$cell_labels, matched$cell_labels)
-    vi <- vi.dist(ref_coord$cell_labels, matched$cell_labels)
-    root_mse <- rmse(ref_counts[,matched_locs],query_counts[,matched$barcodes])
+        ref_coord <- ref_coord[matched_locs,]
+        ari <- adjustedRandIndex(ref_coord$cell_labels, matched$cell_labels)
+        vi <- vi.dist(ref_coord$cell_labels, matched$cell_labels)
+    }
+    
     score <- data.frame("Method" = method,
         "Regime" = regime,
         "ref_sample" = ref,
         "query_sample" = query,
         "ARI" = ari,
-        "VI" = vi,
-        "RMSE" = root_mse)
+        "VI" = vi)
     return(score)
 }
 

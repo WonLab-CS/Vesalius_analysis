@@ -31,7 +31,7 @@ file_name <- paste0(output,"benchmarking_scores.csv")
 scores <- read.csv(file_name)
 scores$Method <- gsub("synthetic/","", scores$Method)
 scores$X <- NULL
-
+scores$Regime <- factor(scores$Regime, levels = c("circle","layered","dropped"))
 #-----------------------------------------------------------------------------#
 # Plot - scores
 #-----------------------------------------------------------------------------#
@@ -72,23 +72,7 @@ pdf(file_out, width = 8, height = 4)
 print(vi)
 dev.off()
 
-mse <- ggplot(scores, aes(x = Method, y = RMSE, fill = Method)) +
-    geom_boxplot() +
-    #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.1) +
-    scale_fill_manual(values =c("#08324e","#1a6ea7ff","#146269ff","#51b090","#de9c71","#b75b1cff","#8e0703ff")) +
-    theme_bw() +
-    theme(strip.background =element_rect(fill="#082233ff"),
-        strip.text = element_text(colour = 'white', size = 15),
-        axis.title = element_text(size = 15),
-        legend.title = element_text(size=15),
-        legend.text = element_text(size = 12),
-        axis.text.y = element_text(size = 12),
-        axis.text.x = element_text(size = 12, angle = 45, hjust = 1,vjust =1)) +
-    facet_wrap(~Regime)
-file_out <- paste0(output, "benchmarking_RMSE.pdf")
-pdf(file_out, width = 8, height = 4)
-print(mse)
-dev.off()
+
 
 #-----------------------------------------------------------------------------#
 # Get best matching
@@ -100,6 +84,9 @@ best_circle <- best_circle[best_circle$ARI == max(best_circle$ARI), ]
 
 best_layer <- scores[scores$Method == "Vesalius" & scores$Regime == "layered",]
 best_layer <- best_layer[best_layer$ARI == sort(best_layer$ARI,decreasing = TRUE)[3], ]
+
+best_dropped <- scores[scores$Method == "Vesalius" & scores$Regime == "dropped",]
+best_dropped <- best_drop[best_drop$ARI == sort(best_drop$ARI,decreasing = TRUE)[1], ]
 
 
 #-----------------------------------------------------------------------------#
@@ -138,6 +125,7 @@ matched <- mapply(function(f,tag){
     f$cell_labels <- gsub("celltype_","",f$cell_labels)
     f$cluster <- NULL
     rownames(f) <- NULL
+    f <- f[,1:5]
     colnames(f) <- c("barcodes","x","y","cell_labels","Method")
     return(f)
 }, matched, methods, SIMPLIFY = FALSE)
@@ -170,6 +158,7 @@ matched <- mapply(function(f,tag){
     f$cell_labels <- gsub("celltype_","",f$cell_labels)
     f$cluster <- NULL
     rownames(f) <- NULL
+    f <- f[,1:5]
     colnames(f) <- c("barcodes","x","y","cell_labels","Method")
     return(f)
 }, matched, methods, SIMPLIFY = FALSE)
@@ -178,6 +167,41 @@ rownames(matched) <- NULL
 
 all_data_layered <- rbind(ref_layered, query_layered, matched)
 all_data_layered$Method[all_data_layered$Method == "precast"] <- "PRECAST"
+
+
+
+### dropped
+ref_dropped <- ref_path[grepl("dropped",ref_path) &
+    grepl(paste0("sample_",best_dropped$ref_sample), ref_path)]
+ref_dropped <- read.csv(ref_dropped)
+ref_dropped$Method <- "Reference"
+ref_dropped <- ref_dropped[, c("barcodes","x","y","cell_labels","Method")]
+query_dropped <- ref_path[grepl("dropped",ref_path) &
+    grepl(paste0("sample_",best_dropped$query_sample), ref_path)]
+query_dropped <- read.csv(query_dropped)
+query_dropped$Method <- "Query"
+query_dropped <- query_dropped[, c("barcodes","x","y","cell_labels","Method")]
+
+matched <- grep(paste0("dropped_sample_",best_layer$ref_sample,"_dropped_sample_",best_layer$query_sample),files, value = TRUE)
+methods <- gsub("/common/martinp4/benchmarking_out//","", matched)
+methods <- sapply(strsplit(split = "/report/",x = methods),"[[",1)
+matched <- mapply(function(f,tag){
+    f <- read.csv(f)
+    f <- f[,-1]
+    f$Method <- tag
+    f$barcodes <- gsub("q_","", f$barcodes)
+    f$cell_labels <- gsub("celltype_","",f$cell_labels)
+    f$cluster <- NULL
+    rownames(f) <- NULL
+    f <- f[,1:5]
+    colnames(f) <- c("barcodes","x","y","cell_labels","Method")
+    return(f)
+}, matched, methods, SIMPLIFY = FALSE)
+matched <- do.call("rbind", matched)
+rownames(matched) <- NULL
+
+all_data_dropped<- rbind(ref_dropped, query_dropped, matched)
+all_data_dropped$Method[all_data_dropped$Method == "precast"] <- "PRECAST"
 
 #-----------------------------------------------------------------------------#
 # Plot - best matched
@@ -233,6 +257,32 @@ print(g1)
 dev.off()
 
 
+all_data_dropped$cell_labels <- as.factor(all_data_dropped$cell_labels)
+all_data_dropped$Method <- as.factor(all_data_dropped$Method)
+all_data_dropped$Method <- factor(all_data_dropped$Method,
+    levels = c("Reference","Query","Vesalius","CytoSpace","Tangram","SLAT","PASTE","GPSA","PRECAST"))
+cols <- colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))
+cols <- cols(length(levels(all_data_dropped$cell_labels)))
+g1 <- ggplot(all_data_dropped, aes(x = x, y = y, col = cell_labels)) +
+    geom_point(size = 0.8) +
+    theme_bw() +
+    theme(strip.background =element_rect(fill="#082233ff"),
+        strip.text = element_text(colour = 'white', size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size=15),
+        legend.text = element_text(size = 12),
+        axis.text.y = element_text(size = 12))+
+    scale_color_manual(values = cols) +
+    facet_wrap(~Method) +
+    guides(colour = guide_legend(
+        override.aes = list(size =  5)))+
+    labs(col = "Cell Labels")
+file_name <- paste0(output, "benchmarking_best_match_dropped.pdf")
+pdf(file_name, width = 10, height = 8)
+print(g1)
+dev.off()
+
+
 ref_circle$regime <- "Circle"
 ref_circle$cell_labels <- as.factor(ref_circle$cell_labels)
 cols <- colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))
@@ -262,6 +312,30 @@ ref_layered$cell_labels <- as.factor(ref_layered$cell_labels)
 cols <- colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))
 cols <- cols(length(levels(ref_layered$cell_labels)))
 g1 <- ggplot(ref_layered, aes(x = x, y = y, col = cell_labels)) +
+    geom_point(size = 1.2) +
+    theme_bw() +
+    theme(strip.background =element_rect(fill="#082233ff"),
+        strip.text = element_text(colour = 'white', size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size=15),
+        legend.text = element_text(size = 12),
+        axis.text.y = element_text(size = 12))+
+    scale_color_manual(values = cols) +
+    facet_wrap(~regime) +
+    guides(colour = guide_legend(
+        override.aes = list(size =  5)))+
+    labs(col = "Cell Labels")
+file_name <- paste0(output, "benchmarking_reference_layer.pdf")
+pdf(file_name, width = 6, height = 5)
+print(g1)
+dev.off()
+
+
+ref_dropped$regime <- "Dropped"
+ref_dropped$cell_labels <- as.factor(ref_dropped$cell_labels)
+cols <- colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))
+cols <- cols(length(levels(ref_dropped$cell_labels)))
+g1 <- ggplot(ref_dropped, aes(x = x, y = y, col = cell_labels)) +
     geom_point(size = 1.2) +
     theme_bw() +
     theme(strip.background =element_rect(fill="#082233ff"),

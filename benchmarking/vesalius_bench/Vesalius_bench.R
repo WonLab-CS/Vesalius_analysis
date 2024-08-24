@@ -29,10 +29,10 @@ set.seed(1547)
 #-----------------------------------------------------------------------------#
 input <- "/common/wonklab/synthetic_spatial"
 
-if(!dir.exists("/common/martinp4/benchmarking_out/Vesalius/synthetic/")){
-    dir.create("/common/martinp4/benchmarking_out/Vesalius/synthetic/")
+if(!dir.exists("/common/martinp4/benchmarking_out/Vesalius/report/")){
+    dir.create("/common/martinp4/benchmarking_out/Vesalius/report/")
 }
-output_data <- "/common/martinp4/benchmarking_out/Vesalius/synthetic/"
+output_data <- "/common/martinp4/benchmarking_out/Vesalius/report/"
 cat("Output setup: DONE \n")
 #-----------------------------------------------------------------------------#
 # Data set up 
@@ -111,8 +111,20 @@ cat("Query Procesing: DONE\n")
 
 
 
-
-matched <- map_assays(seed_assay = ref,
+if (data_type == "dropped") {
+    matched <- map_assays(seed_assay = ref,
+    query_assay = query,
+    neighborhood = "graph",
+    use_norm = "raw",
+    depth = 2,
+    threshold = 0.9,
+    epochs = 20,
+    batch_size = 1000,
+    allow_duplicates = TRUE,
+    jitter = FALSE,
+    use_cost = use_cost)
+} else {
+    matched <- map_assays(seed_assay = ref,
     query_assay = query,
     neighborhood = "graph",
     use_norm = "raw",
@@ -122,6 +134,8 @@ matched <- map_assays(seed_assay = ref,
     batch_size = 1000,
     jitter = FALSE,
     use_cost = use_cost)
+}
+
 
 
 cat("Mapping: DONE\n")

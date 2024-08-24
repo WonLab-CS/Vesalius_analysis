@@ -116,9 +116,11 @@ precast <- PRECAST::AddParSetting(precast,
     verbose = TRUE,
     coreNum = 1)
 
-buffer <- try(PRECAST::PRECAST(precast, K = 6:15),silent = TRUE)
-if (is(buffer, "try-error")){
+buffer <- try(PRECAST::PRECAST(precast, K = 12:18),silent = TRUE)
+if (is(buffer, "try-error") && data_type != "dropped"){
     buffer <- PRECAST::PRECAST(precast, K = 10:13)
+} else if (is(buffer, "try-error") && data_type == "dropped") {
+    buffer <- PRECAST::PRECAST(precast, K = 16:19)
 }
 if (is(buffer, "try-error")){
     q("no")
@@ -126,7 +128,8 @@ if (is(buffer, "try-error")){
 precast <- PRECAST::SelectModel(buffer)
 reslist <- precast@resList
 
-query_tmp <- assign_cluster(reslist,query_coord, ref_coord)
+query_coord$cluster_query <- unlist(reslist$cluster[2,])
+query_coord$cluster_ref <- unlist(reslist$cluster[1,])
 
 
 
@@ -134,5 +137,5 @@ ref_tag <- gsub(".csv","", tag[i])
 ref_tag <- gsub("spatial_territories_spatial_coordinates_","",ref_tag)
 query_tag <- gsub(".csv","", tag[j])
 query_tag <- gsub("spatial_territories_spatial_coordinates_","",query_tag)
-write.csv(query_tmp,
+write.csv(query_coord,
     file = paste0(output_data,"PRECAST_aligned_",ref_tag,"_",query_tag,".csv")) 

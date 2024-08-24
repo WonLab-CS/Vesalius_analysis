@@ -23,14 +23,12 @@ submit_new_job() {
 for i in "${new_tool}"; do
     while true; do
         jobs=$(squeue -u martinp4 | grep "$job_id" | wc -l)
-        if [ "$jobs" -le 1 ]; then
-            echo "No more jobs - kill it"
-            break
-        elif [ "$jobs" -eq 2 ]; then
+        if [ "$jobs" -eq 0 ]; then
             echo "Job $job_id no longer exists. Submitting a new job..."
             submit_new_job "$tool_path" $i
             job_id="$i"
-            echo "$job_id"
+            echo "New tool $job_id"
+            break  
         else
             echo "Job $job_id is still running. Checking again in 120 seconds..."
         fi

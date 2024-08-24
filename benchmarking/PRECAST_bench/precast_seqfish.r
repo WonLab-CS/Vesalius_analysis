@@ -36,11 +36,11 @@ assign_cluster <- function(reslist, query, seed) {
         locs <- sample(seq_len(nrow(tmp)),size = nrow(query[[i]]), replace = TRUE)
         query[[i]]$col <- tmp$col[locs]
         query[[i]]$row <- tmp$row[locs]
-        query[[i]]$cell_labels <- tmp$cell_labels[locs]
+        query[[i]]$trial <- tmp$trial[locs]
     }
     query <- do.call("rbind", query)
-    query <- query[, c("barcodes", "col","row","cell_labels","cluster")]
-    colnames(query) <- c("barcodes","x","y","cell_labels","cluster")
+    query <- query[, c("barcodes", "col","row","trial","cluster")]
+    colnames(query) <- c("barcodes","x","y","trial","cluster")
     return(query)
 }
 
@@ -127,8 +127,8 @@ if (is(buffer, "try-error")) {
 precast <- PRECAST::SelectModel(buffer)
 reslist <- precast@resList
 
-query_coord <- query@meta.data
-seed_coord <- seed@meta.data
+query_coord <- precast@seulist[[2]]@meta.data
+seed_coord <- precast@seulist[[1]]@meta.data
 save(query_coord, seed_coord, reslist,precast, file = paste0(output,"intermed_seqFISH.Rda"))
 query_tmp <- assign_cluster(reslist,query_coord, seed_coord)
 
@@ -151,7 +151,7 @@ base_colours <- c(
 pal <- colorRampPalette(base_colours)
 colors <- pal(n_colors)
 
-p <- ggplot(query_tmp, aes(x,y, col = as.factor(cell_lables))) +
+p <- ggplot(query_tmp, aes(x,y, col = as.factor(trial))) +
     geom_point(size = 0.7) +
     scale_color_manual(values = colors) +
     theme_void() +
@@ -163,3 +163,5 @@ p <- ggplot(query_tmp, aes(x,y, col = as.factor(cell_lables))) +
 
 file_name <- paste0(output,"PRECAST_aligned_",seed_tag,"_",query_tag,".pdf")
 pdf(file_name, width = 12, height = 8)
+print(p)
+dev.off()
