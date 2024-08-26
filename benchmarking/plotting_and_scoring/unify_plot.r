@@ -238,7 +238,7 @@ g1 <- ggplot(all_data_circle, aes(x = x, y = y, col = cell_labels)) +
         override.aes = list(size =  5)))+
     labs(col = "Cell Labels")
 file_name <- paste0(output, "benchmarking_best_match_circle.pdf")
-pdf(file_name, width = 12, height = 8)
+pdf(file_name, width = 12, height = 6)
 print(g1)
 dev.off()
 
@@ -264,7 +264,7 @@ g1 <- ggplot(all_data_layered, aes(x = x, y = y, col = cell_labels)) +
         override.aes = list(size =  5)))+
     labs(col = "Cell Labels")
 file_name <- paste0(output, "benchmarking_best_match_layered.pdf")
-pdf(file_name, width = 12, height = 8)
+pdf(file_name, width = 12, height = 6)
 print(g1)
 dev.off()
 
@@ -291,7 +291,7 @@ g1 <- ggplot(all_data_dropped, aes(x = x, y = y, col = cell_labels)) +
         override.aes = list(size =  5)))+
     labs(col = "Cell Labels")
 file_name <- paste0(output, "benchmarking_best_match_dropped.pdf")
-pdf(file_name, width = 12, height = 8)
+pdf(file_name, width = 12, height = 6)
 print(g1)
 dev.off()
 
