@@ -32,6 +32,16 @@ scores <- read.csv(file_name)
 scores$Method <- gsub("synthetic/","", scores$Method)
 scores$X <- NULL
 scores$Regime <- factor(scores$Regime, levels = c("circle","layered","dropped"))
+
+sp <- sapply(split(scores,scores$Method), function(x){
+    m <- mean(x$ARI)
+    names(m) <- x$Method[1L]
+    return(m)
+})
+names(sp) <- sapply(strsplit(names(sp),"\\."),"[[",1)
+sp <- sort(sp)
+scores$Method <- as.factor(scores$Method)
+scores$Method <- factor(scores$Method, levels = names(sp))
 #-----------------------------------------------------------------------------#
 # Plot - scores
 #-----------------------------------------------------------------------------#
@@ -83,10 +93,10 @@ best_circle <- best_circle[best_circle$ARI == max(best_circle$ARI), ]
 
 
 best_layer <- scores[scores$Method == "Vesalius" & scores$Regime == "layered",]
-best_layer <- best_layer[best_layer$ARI == sort(best_layer$ARI,decreasing = TRUE)[3], ]
+best_layer <- best_layer[best_layer$ARI == sort(best_layer$ARI,decreasing = TRUE)[1], ]
 
 best_dropped <- scores[scores$Method == "Vesalius" & scores$Regime == "dropped",]
-best_dropped <- best_drop[best_drop$ARI == sort(best_drop$ARI,decreasing = TRUE)[1], ]
+best_dropped <- best_dropped[best_dropped$ARI == sort(best_dropped$ARI,decreasing = TRUE)[1], ]
 
 
 #-----------------------------------------------------------------------------#
@@ -133,7 +143,7 @@ matched <- do.call("rbind", matched)
 rownames(matched) <- NULL
 
 all_data_circle <- rbind(ref_circle, query_circle, matched)
-all_data_circle$Method[all_data_circle$Method == "precast"] <- "PRECAST"
+
 
 ### Layered
 ref_layered <- ref_path[grepl("layered",ref_path) &
@@ -166,7 +176,7 @@ matched <- do.call("rbind", matched)
 rownames(matched) <- NULL
 
 all_data_layered <- rbind(ref_layered, query_layered, matched)
-all_data_layered$Method[all_data_layered$Method == "precast"] <- "PRECAST"
+
 
 
 
@@ -182,7 +192,7 @@ query_dropped <- read.csv(query_dropped)
 query_dropped$Method <- "Query"
 query_dropped <- query_dropped[, c("barcodes","x","y","cell_labels","Method")]
 
-matched <- grep(paste0("dropped_sample_",best_layer$ref_sample,"_dropped_sample_",best_layer$query_sample),files, value = TRUE)
+matched <- grep(paste0("dropped_sample_",best_dropped$ref_sample,"_dropped_sample_",best_dropped$query_sample),files, value = TRUE)
 methods <- gsub("/common/martinp4/benchmarking_out//","", matched)
 methods <- sapply(strsplit(split = "/report/",x = methods),"[[",1)
 matched <- mapply(function(f,tag){
@@ -201,7 +211,7 @@ matched <- do.call("rbind", matched)
 rownames(matched) <- NULL
 
 all_data_dropped<- rbind(ref_dropped, query_dropped, matched)
-all_data_dropped$Method[all_data_dropped$Method == "precast"] <- "PRECAST"
+
 
 #-----------------------------------------------------------------------------#
 # Plot - best matched
@@ -220,14 +230,15 @@ g1 <- ggplot(all_data_circle, aes(x = x, y = y, col = cell_labels)) +
         axis.title = element_text(size = 15),
         legend.title = element_text(size=15),
         legend.text = element_text(size = 12),
-        axis.text.y = element_text(size = 12)) +
+        axis.text.y = element_text(size = 12),
+        legend.position = "left") +
     scale_color_manual(values = cols) +
-    facet_wrap(~Method) +
+    facet_wrap(~Method, nrow = 2) +
     guides(colour = guide_legend(
         override.aes = list(size =  5)))+
     labs(col = "Cell Labels")
 file_name <- paste0(output, "benchmarking_best_match_circle.pdf")
-pdf(file_name, width = 10, height = 8)
+pdf(file_name, width = 12, height = 8)
 print(g1)
 dev.off()
 
@@ -245,14 +256,15 @@ g1 <- ggplot(all_data_layered, aes(x = x, y = y, col = cell_labels)) +
         axis.title = element_text(size = 15),
         legend.title = element_text(size=15),
         legend.text = element_text(size = 12),
-        axis.text.y = element_text(size = 12))+
+        axis.text.y = element_text(size = 12),
+        legend.position = "left")+
     scale_color_manual(values = cols) +
-    facet_wrap(~Method) +
+    facet_wrap(~Method, nrow = 2) +
     guides(colour = guide_legend(
         override.aes = list(size =  5)))+
     labs(col = "Cell Labels")
 file_name <- paste0(output, "benchmarking_best_match_layered.pdf")
-pdf(file_name, width = 10, height = 8)
+pdf(file_name, width = 12, height = 8)
 print(g1)
 dev.off()
 
@@ -271,14 +283,15 @@ g1 <- ggplot(all_data_dropped, aes(x = x, y = y, col = cell_labels)) +
         axis.title = element_text(size = 15),
         legend.title = element_text(size=15),
         legend.text = element_text(size = 12),
-        axis.text.y = element_text(size = 12))+
+        axis.text.y = element_text(size = 12),
+        legend.position = "left")+
     scale_color_manual(values = cols) +
-    facet_wrap(~Method) +
+    facet_wrap(~Method, nrow = 2) +
     guides(colour = guide_legend(
         override.aes = list(size =  5)))+
     labs(col = "Cell Labels")
 file_name <- paste0(output, "benchmarking_best_match_dropped.pdf")
-pdf(file_name, width = 10, height = 8)
+pdf(file_name, width = 12, height = 8)
 print(g1)
 dev.off()
 
@@ -349,7 +362,7 @@ g1 <- ggplot(ref_dropped, aes(x = x, y = y, col = cell_labels)) +
     guides(colour = guide_legend(
         override.aes = list(size =  5)))+
     labs(col = "Cell Labels")
-file_name <- paste0(output, "benchmarking_reference_layer.pdf")
+file_name <- paste0(output, "benchmarking_reference_dropped.pdf")
 pdf(file_name, width = 6, height = 5)
 print(g1)
 dev.off()
