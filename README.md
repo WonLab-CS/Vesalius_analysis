@@ -1,7 +1,7 @@
 # Vesalius analysis 
 This repository contains the code used to generate all the plots in the _Vesalius 2.0.0_ manuscript. 
 
-[ADD Link to pre-print/paper]
+[Pre-print](https://www.biorxiv.org/content/10.1101/2024.08.31.610638v2)
 
 # Disclaimer
 All the analysis was carried on a HPC unit running the [Slurm](https://slurm.schedmd.com/documentation.html) workload manager. 
