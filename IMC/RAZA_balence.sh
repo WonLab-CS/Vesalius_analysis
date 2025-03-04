@@ -12,5 +12,8 @@
 #SBATCH -p defq
 
 module load R/4.2.1 rlibs/4.2.1
-module load hdf5
-Rscript /common/wonklab/RAZA/pipeline/RAZA_balence.R $SLURM_ARRAY_TASK_ID
+input="/common/wonklab/RAZA/split_data/"
+output_plots="/common/wonklab/RAZA/output_plots/"
+output_data="/common/wonklab/RAZA/output_plots/"
+script_loc="/home/martinp4/common/Vesalius_analysis/IMC/"
+Rscript ${script_loc}RAZA_balence.R $SLURM_ARRAY_TASK_ID

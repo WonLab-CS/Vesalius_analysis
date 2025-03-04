@@ -19,19 +19,33 @@ library(NMF, lib.loc = "/common/martinp4/R")
 library(spatstat.utils, lib.loc = "/common/martinp4/R")
 library(vesalius, lib.loc = "/common/martinp4/R")
 library(RColorBrewer)
+library(ggalluvial, lib.loc = "/common/martinp4/R")
 set.seed(1547)
 #-----------------------------------------------------------------------------#
 # Set future global for multicore processing
 #-----------------------------------------------------------------------------#
-if (!dir.exists("/common/martinp4/stos/report/stos/")) {
-    dir.create("/common/martinp4/stos/report/stos/")
-}
-output <- "/common/martinp4/stos/report/stos/"
+
 args <- commandArgs(TRUE)
 idx <- as.numeric(args[1])
+input <- args[2]
+output <- args[3]
 
-use_cost <- c("feature", "niche")
+
 slices <- c( "embryo1","embryo2","embryo3")
+#-----------------------------------------------------------------------------#
+# Utility functions
+#-----------------------------------------------------------------------------#
+
+get_acc <- function(rib_df, seqFISH, stereo) {
+    seq <- rib_df$Stereo_seq_Cells[
+            rib_df$seqFISH_Cells %in% seqFISH] %in% stereo
+    stereo <- rib_df$seqFISH_Cells[
+            rib_df$Stereo_seq_Cells %in% stereo] %in% seqFISH
+
+    seq <- sum(seq) / (sum(seq) + sum(!seq))
+    stereo <- sum(stereo) / (sum(stereo) + sum(!stereo))
+    return(data.frame("seq_acc" = seq, "stereo_acc" = stereo))
+}
 #-----------------------------------------------------------------------------#
 # Load data
 #-----------------------------------------------------------------------------#
@@ -217,4 +231,135 @@ file_out <- paste0(output, "stereo_to_seqFISH_",slices[idx],"_cost_score.pdf")
 pdf(file_out, width = 8, height = 7)
 print(g3)
 dev.off()
+#-----------------------------------------------------------------------------#
+# Set brain cell labels for accuracy 
+#-----------------------------------------------------------------------------#
+seq_brain <- c("Forebrain/Midbrain/Hindbrain","Spinal cord")
+stereo_brain <- c("Brain","Notochord")
 
+#-----------------------------------------------------------------------------#
+# Alluvial plot 
+#-----------------------------------------------------------------------------#
+from <- matched@map$from 
+sf_cells <- fish@territories$Cells[match(from, fish@territories$barcodes)]
+to <- sapply(sapply(strsplit(matched@map$to, "-"),"[",1:2,simplify = F),paste0, collapse ="-")
+st_cells <- stereo@territories$Cells[match(to, stereo@territories$barcodes)]
+rib_df <- data.frame("seqFISH_Cells" = sf_cells,
+    "Stereo_seq_Cells" = st_cells,  
+    Freq = rep(1, length(st_cells)))
+
+sf_tabs <- table(sf_cells) > 200
+rib_df <- rib_df[rib_df$seqFISH_Cells %in% names(sf_tabs)[sf_tabs],]
+
+acc_brain <- get_acc(rib_df, seq_brain, stereo_brain)
+acc_brain$from <- slices[idx]
+acc_brain$to <- "Stereo"
+print(acc_brain)
+
+labels <- sort(unique(rib_df$Stereo_seq_Cells))
+ter_col <- length(labels)
+  base_colours <- c(
+      "#E69F00",
+      "#56B4E9",
+      "#009E73",
+      "#F0E442",
+      "#0072B2",
+      "#D55E00",
+      "#CC79A7",
+      "#999999")
+if (ter_col < length(base_colours)) {
+    ter_pal <- colorRampPalette(base_colours[seq(1, ter_col)])
+    
+} else {
+    ter_pal <- colorRampPalette(base_colours)
+}
+
+colors <- ter_pal(ter_col)
+
+rib <- ggplot(rib_df, aes(axis1 = seqFISH_Cells, axis2 = Stereo_seq_Cells, y = Freq)) +
+    geom_alluvium(aes(fill = Stereo_seq_Cells),
+        curve_type = "sigmoid") +
+    geom_stratum() +
+    geom_text(stat = "stratum", aes(label = paste(after_stat(stratum))), size = 4)+
+    theme_void() + 
+    theme(legend.text = element_text(size=20),
+        legend.title = element_text(size = 20),
+        legend.key.size = unit(1.5, "cm")) +
+    scale_fill_manual(values = colors) +
+    labs(fill = "Stereo-seq Cell Types") +
+    guides(fill = guide_legend(
+            override.aes = list(size = 2)))
+
+file_out <- paste0(output, "seqFISH_",slices[idx],"_to_stereo_alluvial_cells.pdf")
+pdf(file_out, width = 14, height = 10)
+print(rib)
+dev.off()
+
+file_out <- paste0(output, "seqFISH_",slices[idx],"_to_stereo_acc.csv")
+write.csv(acc_brain, file = file_out)
+
+
+
+#-----------------------------------------------------------------------------#
+# Alluvial plot rev
+#-----------------------------------------------------------------------------#
+from <- reverse@map$to 
+sf_cells <- fish@territories$Cells[match(from, fish@territories$barcodes)]
+to <- sapply(sapply(strsplit(reverse@map$from, "-"),"[",1:2,simplify = F),paste0, collapse ="-")
+st_cells <- stereo@territories$Cells[match(to, stereo@territories$barcodes)]
+rib_df <- data.frame("seqFISH_Cells" = sf_cells,
+    "Stereo_seq_Cells" = st_cells,  
+    Freq = rep(1, length(st_cells)))
+
+sf_tabs <- table(sf_cells) > 200
+rib_df <- rib_df[rib_df$seqFISH_Cells %in% names(sf_tabs)[sf_tabs],]
+
+acc_brain <- get_acc(rib_df, seq_brain, stereo_brain)
+acc_brain$from <- "Stereo"
+acc_brain$to <- slices[idx]
+print(acc_brain)
+
+labels <- sort(unique(rib_df$seqFISH_Cells))
+ter_col <- length(labels)
+  base_colours <- c(
+      "#E69F00",
+      "#56B4E9",
+      "#009E73",
+      "#F0E442",
+      "#0072B2",
+      "#D55E00",
+      "#CC79A7",
+      "#999999")
+if (ter_col < length(base_colours)) {
+    ter_pal <- colorRampPalette(base_colours[seq(1, ter_col)])
+    
+} else {
+    ter_pal <- colorRampPalette(base_colours)
+}
+
+colors <- ter_pal(ter_col)
+
+rib <- ggplot(rib_df, aes(axis1 = Stereo_seq_Cells, axis2 = seqFISH_Cells, y = Freq)) +
+    geom_alluvium(aes(fill = seqFISH_Cells),
+        curve_type = "sigmoid") +
+    geom_stratum() +
+    geom_text(stat = "stratum", aes(label = paste(after_stat(stratum))), size = 4)+
+    theme_void() + 
+    theme(legend.text = element_text(size=20),
+        legend.title = element_text(size = 20),
+        legend.key.size = unit(1.1, "cm")) +
+    scale_fill_manual(values = colors) +
+    labs(fill = "SeqFISH Cell Types") +
+    guides(fill = guide_legend(
+            override.aes = list(size = 1.5)))
+
+file_out <- paste0(output, "stereo_to_seqFISH_",slices[idx],"_alluvial_cells.pdf")
+pdf(file_out, width = 14, height = 10)
+print(rib)
+dev.off()
+file_out <- paste0(output, "stereo_to_seqFISH_",slices[idx],"_acc.csv")
+write.csv(acc_brain, file = file_out)
+
+#-----------------------------------------------------------------------------#
+# Get accuracy of broad cell types
+#-----------------------------------------------------------------------------#

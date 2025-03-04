@@ -38,7 +38,7 @@ options(future.globals.maxSize = max_size)
 # Loading
 #-----------------------------------------------------------------------------#
 
-
+# Not a submitted job so we change the code here
 if (!dir.exists("/common/wonklab/Stereo_seq_arista/report/")) {
     dir.create("/common/wonklab/Stereo_seq_arista/report/")
 }

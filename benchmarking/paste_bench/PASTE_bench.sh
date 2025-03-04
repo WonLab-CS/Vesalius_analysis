@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=paste
+#SBATCH --job-name=PASTE_bench
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
@@ -13,8 +13,15 @@
 
 source /home/martinp4/anaconda3/etc/profile.d/conda.sh
 conda activate paste
-cd common/
-python /common/martinp4/benchmarking_out/PASTE/pipeline/PASTE_bench.py $SLURM_ARRAY_TASK_ID "circle"
-python /common/martinp4/benchmarking_out/PASTE/pipeline/PASTE_bench.py $SLURM_ARRAY_TASK_ID "layered"
-python /common/martinp4/benchmarking_out/PASTE/pipeline/PASTE_bench.py $SLURM_ARRAY_TASK_ID "dropped"
+input="/common/wonklab/synthetic_spatial"
+output="/common/martinp4/benchmarking_out/PASTE/report/"
+script_loc="/home/martinp4/common/Vesalius_analysis/benchmarking/PASTE_bench/"
+
+python ${script_loc}PASTE_bench.py $SLURM_ARRAY_TASK_ID "one_cell" $input $output
+python ${script_loc}PASTE_bench.py $SLURM_ARRAY_TASK_ID "two_cell" $input $output
+python ${script_loc}PASTE_bench.py $SLURM_ARRAY_TASK_ID "contact_one" $input $output
+python ${script_loc}PASTE_bench.py $SLURM_ARRAY_TASK_ID "contact_two" $input $output
+python ${script_loc}PASTE_bench.py $SLURM_ARRAY_TASK_ID "circle" $input $output
+python ${script_loc}PASTE_bench.py $SLURM_ARRAY_TASK_ID "layered" $input $output
+python ${script_loc}PASTE_bench.py $SLURM_ARRAY_TASK_ID "dropped" $input $output
 conda deactivate

@@ -35,20 +35,20 @@ options(future.globals.maxSize = max_size)
 #-----------------------------------------------------------------------------#
 # Set future global for multicore processing
 #-----------------------------------------------------------------------------#
-
-if (!dir.exists("/common/martinp4/stos/report/stos/")) {
-    dir.create("/common/martinp4/stos/report/stos/")
-}
-output <- "/common/martinp4/stos/report/stos/"
 args <- commandArgs(TRUE)
 idx <- as.numeric(args[1])
+input <- args[2]
+output <- args[3]
+
+
+
 
 use_cost <- c("feature", "niche")
 slices <- c( "embryo1","embryo2","embryo3")
 #-----------------------------------------------------------------------------#
 # Loading seqFISH
 #-----------------------------------------------------------------------------#
-coord <- list.files(path = "/common/wonklab/seqFISH/",
+coord <- list.files(path = input,
     pattern = "metadata", full.names = TRUE)
 coord <- readRDS(coord)
 

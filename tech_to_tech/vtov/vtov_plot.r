@@ -27,7 +27,8 @@ set.seed(1547)
 #-----------------------------------------------------------------------------#
 max_size <- 10000 * 1024^2
 options(future.globals.maxSize = max_size)
-output <- "/common/martinp4/stos/report/vtov/"
+args <- commandArgs(TRUE)
+output <- args[1]
 #-----------------------------------------------------------------------------#
 # Load data
 #-----------------------------------------------------------------------------#
@@ -35,7 +36,7 @@ files <- list.files(output, pattern = ".rds", full.names = TRUE)
 seed <- readRDS(grep("seed", files, value = TRUE))
 query <- readRDS(grep("query", files, value = TRUE))
 matched <- readRDS(grep("matched", files, value = TRUE))
-#reverse <- readRDS(grep("matched", files, value = TRUE))
+
 
 tags <- list.files(output, pattern = ".rds", full.names = FALSE)
 seed_tag <- gsub("_seed.rds","", grep("seed",tags, value = TRUE))
@@ -188,4 +189,98 @@ dev.off()
 file_out <- paste0(output, query_tag,"_to_",seed_tag,"_cost_score.pdf")
 pdf(file_out, width = 8, height = 6)
 print(g6)
+dev.off()
+
+#-----------------------------------------------------------------------------#
+# Jaccard function
+# a bit hardcoded for now not worth the effort or making it work for all cases
+#-----------------------------------------------------------------------------#
+jaccard_cells <- function(viz, hd, matched) {
+    to <- paste0(sapply(strsplit(matched@map$to,"-"),"[[",1),"-1")
+    from <- matched@map$from
+    viz <- viz[unique(to)]
+    names(hd) <- to
+    hd <- split(hd, names(hd))
+    hd <- lapply(hd, unlist)
+    hd <- hd[unique(to)]
+    jacques <- mapply(function(h,v){
+        jack <- length(intersect(h, names(v))) / length(union(h, names(v)))
+        return(jack)
+    },hd,viz)
+    jacques <- jacques[to]
+    ter <- matched@territories
+    ter$Jaccard <- jacques
+    ter$prop <- matched@map$prop
+    ter$signif <- matched@map$prop > 0.05
+    return(ter)
+}
+
+#-----------------------------------------------------------------------------#
+# load and plot
+#-----------------------------------------------------------------------------#
+
+prop_viz <- readRDS(paste0(output, "visium_mouse_brain_prop.rds"))
+prop_hd <- readRDS(paste0(output, "visiumHD_mouse_brain_cells.rds" ))
+
+jack <- jaccard_cells(prop_viz, prop_hd, matched)
+jack$Sample <- "Visium to VisiumHD - Jaccard I."
+
+
+h <- ggplot(jack,aes(x = Jaccard)) +
+    geom_histogram(
+        breaks=seq(0,max(jack$Jaccard)+0.1,0.1),
+        fill="#082233ff",
+        colour="#082233ff") +
+    geom_vline(xintercept = quantile(jack$Jaccard, 0.25),color = "#E69F00",linetype ="solid", linewidth = 1.2)+
+    geom_vline(xintercept = quantile(jack$Jaccard, 0.5),color = "#56B4E9",linetype ="solid",linewidth = 1.2)+
+    geom_vline(xintercept = quantile(jack$Jaccard, 0.75),color = "#009E73",linetype ="solid", linewidth = 1.2)+
+    theme_bw() +
+    theme(strip.background =element_rect(fill="#082233ff"),
+        strip.text = element_text(colour = 'white', size = 15),
+        axis.title = element_text(size = 15),
+        legend.title = element_text(size=15),
+        legend.text = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12, angle = 45, hjust = 1,vjust =1)) +
+    facet_wrap(~Sample)
+file_out <- paste0(output,"Visium_to_VisiumHD_Jaccard.pdf")
+pdf(file_out, width = 5, height = 4)
+print(h)
+dev.off()
+
+p <- ggplot(jack, aes(x = x,  y = y, col = Jaccard)) +
+    geom_point() +
+    scale_color_viridis_c(option = "mako") +
+    theme_void() +
+    labs(title = "Jaccard Index",color = "Score")
+
+file_out <- paste0(output,"Visium_to_VisiumHD_Jaccard_mapped.pdf")
+pdf(file_out, width = 8, height = 6)
+print(p)
+dev.off()
+
+p <- ggplot(jack, aes(x = x,  y = y, col = prop)) +
+    geom_point() +
+    scale_color_gradientn(colors = rev(brewer.pal(11, "Spectral"))) +
+    theme_void() +
+    labs(title = "Cell Type Proportions",color = "p-val")
+
+file_out <- paste0(output,"Visium_to_VisiumHD_Prop_mapped.pdf")
+pdf(file_out, width = 8, height = 6)
+print(p)
+dev.off()
+
+
+
+p <- ggplot(jack, aes(x = x,  y = y, col = signif)) +
+    geom_point(size = 0.85) +
+    scale_color_manual(values = c("#E69F00", "#56B4E9")) +
+    theme_void() +
+    labs(title = "Cell Type Proportions Discretized",color = "pval < 0.05") +
+    guides(colour = guide_legend(
+            override.aes = list(size = 5)))
+
+file_out <- paste0(output,"Visium_to_VisiumHD_PropDisc_mapped.pdf")
+pdf(file_out, width = 8, height = 6)
+print(p)
 dev.off()

@@ -12,7 +12,9 @@
 #SBATCH -p defq
 
 
-module load R/4.2.1
-module load rlibs/4.2.1
-module load hdf5
-Rscript /common/wonklab/Stereo_seq_arista/pipeline/ARISTA_regen.r $SLURM_ARRAY_TASK_ID
+module load R/4.2.1 rlibs/4.2.1 
+input="/common/wonklab/Stereo_seq_arista/"
+outout="/common/wonklab/Stereo_seq_arista/report/"
+script_loc='/home/martinp4/common/Vesalius_analysis/ARTISTA/'
+
+Rscript ${script_loc}ARISTA_regen.r $SLURM_ARRAY_TASK_ID $input $output

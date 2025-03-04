@@ -38,25 +38,17 @@ options(future.globals.maxSize = max_size)
 # directories
 #-----------------------------------------------------------------------------#
 args <- commandArgs(TRUE)
-#idx <- as.numeric(args[1])
-
-if (!dir.exists("/common/wonklab/Stereo_seq_arista/report/")) {
-    dir.create("/common/wonklab/Stereo_seq_arista/report/")
-}
-output_plots <- "/common/wonklab/Stereo_seq_arista/report/"
-output_data <- "/common/wonklab/Stereo_seq_arista/report/"
-
-
-
-
+idx <- as.numeric(args[1])
+input <- args[2]
+output_plots <- output_data <- args[3]
 
 #-----------------------------------------------------------------------------#
 # Get all Data sets
 #-----------------------------------------------------------------------------#
-files <- list.files(output_data, pattern = "_to_", full.names = TRUE)
+files <- list.files(input, pattern = "_to_", full.names = TRUE)
 files <- grep("arista_regen.rds", files, value = TRUE)
 
-tags <- list.files(output_data, pattern = "_to_", full.names = FALSE)
+tags <- list.files(outpinputut_data, pattern = "_to_", full.names = FALSE)
 tags <- grep("arista_regen.rds", tags, value = TRUE)
 tags <- gsub("arista_regen.rds","", tags)
 cat("DATA FIND: DONE \n")
@@ -66,13 +58,12 @@ cat("DATA FIND: DONE \n")
 files <- files[c(4,6,1,2,3,5)]
 tags <- tags[c(4,6,1,2,3,5)]
 matched <- lapply(files, readRDS)
-# matched <- lapply(matched, "[[",2)
 names(matched) <- tags
 cat("MATCHED DATA LOAD: DONE \n")
 
 
-ref_files <-  list.files(output_data, pattern = ".rds", full.names = TRUE)
-ref_tags <-  list.files(output_data, pattern = ".rds", full.names = FALSE)
+ref_files <-  list.files(input, pattern = ".rds", full.names = TRUE)
+ref_tags <-  list.files(input, pattern = ".rds", full.names = FALSE)
 ref_files <- ref_files[!grepl(pattern = "_to_", x = ref_files) & grepl(pattern = "arista_regen", x = ref_files)]
 ref_tags <- ref_tags[!grepl(pattern = "_to_", x = ref_tags) & grepl(pattern = "arista_regen", x = ref_tags)]
 ref_tags <- gsub("arista_regen.rds","", ref_tags)

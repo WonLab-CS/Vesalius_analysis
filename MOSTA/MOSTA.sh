@@ -12,7 +12,8 @@
 #SBATCH -p defq
 
 
-module load R/4.2.1
-module load rlibs/4.2.1
-module load hdf5
-Rscript /common/wonklab/Stereo_seq/pipeline/MOSTA.R $SLURM_ARRAY_TASK_ID
+module load R/4.2.1 rlibs/4.2.1
+input="/common/wonklab/Stereo_seq/Mouse_embryo_all_stage.h5ad"
+output="/common/wonklab/Stereo_seq/report/"
+script_loc="/home/martinp4/common/Vesalius_analysis/MOSTA/"
+Rscript ${scripti_loc}MOSTA.R $SLURM_ARRAY_TASK_ID $input $output

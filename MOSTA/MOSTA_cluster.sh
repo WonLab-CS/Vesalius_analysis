@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=SSclust
+#SBATCH --job-name=MOSTA_Cluster
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
@@ -12,7 +12,8 @@
 #SBATCH -p defq
 
 
-module load R/4.2.1
-module load rlibs/4.2.1
-module load hdf5
-Rscript /common/wonklab/Stereo_seq/pipeline/MOSTA_cluster.r $SLURM_ARRAY_TASK_ID
+module load R/4.2.1 rlibs/4.2.1
+input="/common/wonklab/Stereo_seq/report/" 
+output="/common/wonklab/Stereo_seq/report/"
+script_loc="/home/martinp4/common/Vesalius_analysis/MOSTA/"
+Rscript ${script_loc}MOSTA_cluster.r $SLURM_ARRAY_TASK_ID $input $output

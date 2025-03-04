@@ -39,12 +39,9 @@ options(future.globals.maxSize = max_size)
 #-----------------------------------------------------------------------------#
 args <- commandArgs(TRUE)
 idx <- as.numeric(args[1])
+input <- args[2]
+output_plots <- output_data <- args[3]
 
-if (!dir.exists("/common/wonklab/Stereo_seq/report/")) {
-    dir.create("/common/wonklab/Stereo_seq/report/")
-}
-output_plots <- "/common/wonklab/Stereo_seq/report/"
-output_data <- "/common/wonklab/Stereo_seq/report/"
 
 #-----------------------------------------------------------------------------#
 # Get Single Data sets

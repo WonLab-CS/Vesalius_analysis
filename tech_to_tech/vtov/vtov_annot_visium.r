@@ -32,19 +32,18 @@ options(future.globals.maxSize = max_size)
 # directory prep
 #-----------------------------------------------------------------------------#
 
-if (!dir.exists("/common/martinp4/stos/report/vtov/")) {
-    dir.create("//common/martinp4/stos/report/vtov/")
-}
-output <- "/common/martinp4/stos/report/vtov/"
 
 cat("Output setup: DONE \n")
 
 args <- commandArgs(TRUE)
-idx <- as.numeric(args[1])
+
+input <- args[1]
+rds <- args[2]
+output <- args[3]
 #-----------------------------------------------------------------------------#
 # build from annot
 #-----------------------------------------------------------------------------#
-rds <- "/common/wonklab/mouse_hippocampus_scRNAseq/SCRef_hippocampus.RDS"
+rds <- paste0(rds,"SCRef_hippocampus.RDS")
 rds <- readRDS(rds)
 rds <- Seurat::UpdateSeuratObject(rds)
 
@@ -58,7 +57,7 @@ names(nUMI_ref) <- rownames(rds@meta.data)
 reference <- Reference(ref_counts, cell_types, nUMI_ref)
 cat("Ref build: DONE \n")
 
-input <- "/common/wonklab/visium_brain/"
+
 coordinates <- paste0(input, "rep1/spatial/tissue_positions_list.csv")
 coord <- read.csv(coordinates, header = TRUE)
 coord <- coord[coord[, 2] == 1, ]

@@ -16,11 +16,14 @@ set.seed(1547)
 
 
 #-----------------------------------------------------------------------------#
-# Set future global for multicore processing
+# Set future global for multicore processing 
+# Adding data paths 
 #-----------------------------------------------------------------------------#
 plan(multicore, workers = 4)
 max_size <- 10000 * 1024^2
 options(future.globals.maxSize = max_size)
+
+input <-"/common/wonklab/RAZA/MBTMEIMCPublic/"
 
 if (!dir.exists("/common/wonklab/RAZA/split_data/")) {
     dir.create("/common/wonklab/RAZA/split_data/")
@@ -36,27 +39,21 @@ output_plots <- "/common/wonklab/RAZA/output_plots/"
 # Load data
 #-----------------------------------------------------------------------------#
 
-dat <- read.csv("/common/wonklab/RAZA/MBTMEIMCPublic/SingleCells.csv")
+dat <- read.csv(paste0(input,"SingleCells.csv"))
 
 dat <- split(dat, dat$metabric_id)
-
-# png("/common/wonklab/RAZA/output_plots/n_cell_hist.png", type = "cairo", width = 800, height=800)
-# hist(sapply(dat, nrow), main = "Number of Cells per data set", xlab = "Number of Cells per data set")
-# dev.off()
-
 
 
 dat <- dat[sapply(dat, nrow) > 1000]
 
-cli <- read.csv("/common/wonklab/RAZA/MBTMEIMCPublic/IMCClinical.csv")
+cli <- read.csv(paste0(input, "IMCClinical.csv"))
 cli <- cli[cli$metabric_id %in% names(dat), ]
 status <- apply(cli[,c("ERStatus","ERBB2_pos","Grade","DeathBreast","yearsToStatus")],1,
     function(x){
         return(sum(is.na(x))==0)
     })
 retain <- cli$metabric_id[status]
-# train <- sample(retain, size = 50)
-# test <- sample(retain[!retain %in% train], size = 50)
+
 
 dat <- dat[names(dat) %in% retain]
 
@@ -94,11 +91,6 @@ for (i in seq_along(dat)) {
         counts[[i]],
         assay = unique(dat[[i]]$metabric_id))
     ves <- add_cells(ves, cells[[i]])
-    # if (names(dat)[i] %in% train) {
-    #     file_name <- paste0(output_data, names(dat)[i], "_train.Rda")
-    # } else {
-    #     file_name <- paste0(output_data, names(dat)[i], "_test.Rda")
-    # }
     file_name <- paste0(output_data, names(dat)[i], "_balence.Rda")
     save(ves, file = file_name)
 }

@@ -38,18 +38,13 @@ options(future.globals.maxSize = max_size)
 #-----------------------------------------------------------------------------#
 args <- commandArgs(TRUE)
 idx <- as.numeric(args[1])
+input <- args[2]
+output_plots <- output_data <- args[3]
 
-if (!dir.exists("/common/wonklab/Stereo_seq/report/")) {
-    dir.create("/common/wonklab/Stereo_seq/report/")
-}
-output_plots <- "/common/wonklab/Stereo_seq/report/"
-output_data <- "/common/wonklab/Stereo_seq/report/"
-
-h5 <- "/common/wonklab/Stereo_seq/Mouse_embryo_all_stage.h5ad"
 #-----------------------------------------------------------------------------#
 # load and prepare data
 #-----------------------------------------------------------------------------#
-h5 <- read_h5ad(h5)
+h5 <- read_h5ad(input)
 counts <- t(h5$X)
 annot <- as.character(h5$obs$annotation)
 
@@ -96,7 +91,7 @@ query_counts <- as(counts[, locs_query], "CsparseMatrix")
 
 
 
-#use_cost <- c("feature", "niche", "cell_type", "composition", "territory")
+
 use_cost <- c("feature", "niche", "territory")
 #-----------------------------------------------------------------------------#
 # Create embeddings 

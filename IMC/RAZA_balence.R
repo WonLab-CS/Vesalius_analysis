@@ -31,28 +31,32 @@ options(future.globals.maxSize = max_size)
 #-----------------------------------------------------------------------------#
 # Set future global for multicore processing
 #-----------------------------------------------------------------------------#
+args <- commandArgs(TRUE)
+idx <- as.numeric(args[1])
+input <- args[2]
+output_plots <- args[3]
+output_data <- args[4]
 
-if (!dir.exists("/common/wonklab/RAZA/output_plots/")) {
-    dir.create("/common/wonklab/RAZA/output_plots/")
+if (!dir.exists(output_plots)) {
+    dir.create(output_plots)
 }
-output_plots <- "/common/wonklab/RAZA/output_plots/"
 
-if (!dir.exists("/common/wonklab/RAZA/matched/")) {
-    dir.create("/common/wonklab/RAZA/matched/")
+
+if (!dir.exists(output_data)) {
+    dir.create(output_data)
 }
-output_data <- "/common/wonklab/RAZA/matched/"
+
 cat("Output setup: DONE \n")
 
 #-----------------------------------------------------------------------------#
 # Data set up 
 #-----------------------------------------------------------------------------#
-args <- commandArgs(TRUE)
-idx <- as.numeric(args[1])
-train <- list.files("/common/wonklab/RAZA/split_data",
+
+train <- list.files(input,
     pattern = "_balence.Rda",
     full.names = TRUE)
 
-test <- list.files("/common/wonklab/RAZA/split_data",
+test <- list.files(input,
     pattern = "_balence.Rda",
     full.names = TRUE)
 

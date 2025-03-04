@@ -30,16 +30,19 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1" # export NUMEXPR_NUM_THREADS=1
 #-----------------------------------------------------------------------------#
 # Utilities 
 #-----------------------------------------------------------------------------#
-def get_files(files, id, sim_type, n_samp: int =12):
+def get_files(files, id, sim_type):
+    sim_type = re.escape(sim_type) + '_cells'
     counts = [i  for i in files if re.search(sim_type,i) and re.search('gene_counts',i)]
     counts.sort()
     coord = [i  for i in files if re.search(sim_type,i) and re.search('spatial_coordinates',i)]
     coord.sort()
+    n_samp = len(counts)
     vec_1 = np.tile(np.array(range(n_samp)), n_samp)
     vec_2 = np.repeat(np.array(range(n_samp)), n_samp)
-    file_1 = [counts[vec_1[int(id) -1]], coord[vec_1[int(id)-1]]]
-    file_2 = [counts[vec_2[int(id)-1]], coord[vec_2[int(id)-1]]]
+    file_1 = [counts[vec_1[int(id) - 1]], coord[vec_1[int(id) - 1]]]
+    file_2 = [counts[vec_2[int(id) - 1]], coord[vec_2[int(id) - 1]]]
     return file_1, file_2
+
 
 def load_sim(input_path, file):
     counts = os.path.join(input_path, file[0])
@@ -52,6 +55,7 @@ def load_sim(input_path, file):
     adata.obsm["spatial"] = coord_df.to_numpy()
     adata.obs["Territory"] = coord['Territory'].to_numpy()
     adata.obs['cell_labels'] = coord['cell_labels'].to_numpy()
+    adata.obs['interactions'] = coord['interactions'].to_numpy()
     return adata
 
 def export_coord(query,coord,output_path, tag):
@@ -61,7 +65,7 @@ def export_coord(query,coord,output_path, tag):
     barcodes = pd.DataFrame(query.obs.index.values)
     barcodes = barcodes.set_axis(query.obs.index.values, axis = 0)
     barcodes = barcodes.set_axis(['barcodes'], axis = 1)
-    export_adata = pd.concat([barcodes, spa, query.obs['cell_labels']], axis = 1)
+    export_adata = pd.concat([barcodes, spa, query.obs[['cell_labels','interactions']]], axis = 1)
     export_file = os.path.join(output_path, tag)
     export_adata.to_csv(export_file)
 
@@ -88,14 +92,18 @@ def train(model, loss_fn, optimizer ,data_dict, view_idx, Ns, x):
 
 def main():
     parser = argparse.ArgumentParser(description='GPSA benchmarking on synthetic spatial data')
-    parser.add_argument('slurm_id', help='Slurm ID from array sub')
-    parser.add_argument('type', help = 'type of synthetic data requested')
+    parser.add_argument('--slurm_id', help='Slurm ID from array sub')
+    parser.add_argument('--type', help = 'type of synthetic data requested')
+    parser.add_argument('--input', help = 'Location of input data')
+    parser.add_argument('--output', help = 'Location of out data')
     args = parser.parse_args()
-    output_path = '/common/martinp4/benchmarking_out/GPSA/report/'
-    files = os.listdir("/common/wonklab/synthetic_spatial")
+    output_path = args.output
+    files = os.listdir(args.input)
     files = get_files(files, args.slurm_id, args.type)
-    seed = load_sim("/common/wonklab/synthetic_spatial", files[0])
-    query = load_sim("/common/wonklab/synthetic_spatial", files[1])
+    if files[0][0] == files[1][0]:
+        return 0
+    seed = load_sim(args.input, files[0])
+    query = load_sim(args.input, files[1])
     
     data = {0: seed, 1: query}
     data = ad.concat(data, label = "batch")
@@ -116,7 +124,7 @@ def main():
         }
     }
     
-    N_EPOCHS = 20
+    N_EPOCHS = 50
     model = VariationalGPSA(
         data_dict,
         n_spatial_dims=2,
@@ -139,9 +147,13 @@ def main():
     
     curr_aligned_coords = G_means["expression"].detach().numpy()
     curr_aligned_coords_slice2 = curr_aligned_coords[view_idx["expression"][1]]
-    tag = f'GPSA_aligned_{re.sub(".csv","",files[0][0])}_{re.sub(".csv","",files[1][0])}.csv'
-    tag = re.sub('spatial_territories_gene_counts_','',tag)
-    export_coord(query, curr_aligned_coords_slice2, output_path, tag)
+    tag = f'GPSA_aligned_{args.type}_{re.sub(".csv","",files[0][0])}_{re.sub(".csv","",files[1][0])}.csv'
+    tag = re.sub('gene_counts_','',tag)
+    if 'computational_performance' in tag:
+        return 0
+    else :
+        export_coord(query, curr_aligned_coords_slice2, output_path, tag)
+        return 0
 
 if __name__ == "__main__":
     main()

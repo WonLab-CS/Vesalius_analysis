@@ -27,47 +27,95 @@ set.seed(1547)
 #-----------------------------------------------------------------------------#
 # Output set up 
 #-----------------------------------------------------------------------------#
-input <- "/common/wonklab/synthetic_spatial"
-
-if(!dir.exists("/common/martinp4/benchmarking_out/Vesalius/report/")){
-    dir.create("/common/martinp4/benchmarking_out/Vesalius/report/")
-}
-output_data <- "/common/martinp4/benchmarking_out/Vesalius/report/"
-cat("Output setup: DONE \n")
-#-----------------------------------------------------------------------------#
-# Data set up 
-#-----------------------------------------------------------------------------#
 args <- commandArgs(TRUE)
 idx <- as.numeric(args[1])
 data_type <- args[2]
+input <- args[3]
+output_data <- args[4]
+cost <- as.numeric(args[5])
+cat("Output setup: DONE \n")
 
-synth_coord <- paste0(data_type, "_spatial_territories_spatial_coordinates")
+
+max_size <- 10000 * 1024^2
+options(future.globals.maxSize = max_size)
+#-----------------------------------------------------------------------------#
+# Data set up
+#-----------------------------------------------------------------------------#
 synth_coord <- list.files(input,
-    pattern = synth_coord,
+    pattern = "_spatial_coordinates_",
     full.names = TRUE)
+synth_coord <- grep(data_type, synth_coord, value = TRUE, fixed = TRUE)
 
-synth_counts <- paste0(data_type, "_spatial_territories_gene_counts")
+
 synth_counts <- list.files(input,
-    pattern = synth_counts,
+    pattern = "_gene_counts_",
     full.names = TRUE)
+synth_counts <- grep(data_type, synth_counts, value = TRUE, fixed = TRUE)
 
-tag <- paste0(data_type, "_spatial_territories_spatial_coordinates")
+
 tag <- list.files(input,
-    pattern = tag,
+    pattern = "_spatial_coordinates_",
     full.names = FALSE)
-
+tag <- grep(data_type, tag, value = TRUE, fixed = TRUE)
 
 i <- rep(seq_along(synth_coord), times = length(synth_coord))[idx]
 j <- rep(seq_along(synth_coord), each = length(synth_coord))[idx]
 
 
-use_cost <- c("feature","niche","territory")
+
+if (i == j ) {
+    q("no")
+}
+
+
+ref_tag <- gsub(".csv","", tag[i])
+ref_tag <- gsub("spatial_coordinates_","",ref_tag)
+query_tag <- gsub(".csv","", tag[j])
+query_tag <- gsub("spatial_coordinates_","",query_tag)
+
+#-----------------------------------------------------------------------------#
+# Setting up parameters based on bash input
+#-----------------------------------------------------------------------------#
+
+
+if (grepl(x = data_type, pattern = "computational_performance")){
+    batch_size <- 5000
+} else {
+    batch_size <- 1000
+}
+
+if (!is.na(cost)) {
+    use_cost <- list(
+        c("feature"),
+        c("niche"),
+        c("territory"),
+        c("composition"),
+        c("feature", "niche"),
+        c("feature", "niche","cell_type"),
+        c("feature","composition"),
+        c("feature", "territory"),
+        c("niche","territory"),
+        c("niche","composition"),
+        c("feature","niche","territory"),
+        c("feature", "niche","composition"),
+        c("feature", "niche","composition","territory"),
+        c("feature", "niche","composition","territory","cell_type"))
+    use_cost <- use_cost[[cost]]
+    compressed_tag <- paste(sapply(gsub("cell_type", "y", use_cost),substr,1,1), collapse = "")
+    query_tag <- paste0(query_tag,"_",compressed_tag)
+} else {
+    use_cost <- c("feature", "cell_type")
+}
+cat(paste(data_type, "\n"))
+cat(paste(query_tag, "\n"))
 
 
 cat("Data setup: DONE\n")
 
+
 #-----------------------------------------------------------------------------#
-# Start mapping
+# Prepare seed
+# Only run territory isolation if required
 #-----------------------------------------------------------------------------#
 ref_coord <- read.csv(synth_coord[i])
 ref_counts <- read.csv(synth_counts[i], row.names = 1)
@@ -77,80 +125,108 @@ ref <- build_vesalius_assay(coordinates = ref_coord,
         assay = paste0(data_type,"_",unique(ref_coord$sample)))
 ref_cells <- ref_coord$cell_labels
 names(ref_cells) <- ref_coord$barcodes
-ref <- add_cells(ref, ref_cells)
+ref <- add_cells(ref, ref_cells, add_name = "cell_labels")
+ref_interactions <- ref_coord$interactions
+names(ref_interactions) <- ref_coord$barcodes
+ref <- add_cells(ref,ref_interactions, add_name = "interactions")
+
 ref <- ref %>%
-    generate_embeddings() %>%
-    smooth_image(dimensions = seq(1, 30), method =c("iso","box"),sigma=1, box = 10, iter = 20) %>%
-    segment_image(dimensions = seq(1, 30), method = "kmeans", col_resolution  = 12)%>% 
-    isolate_territories()
+     generate_embeddings()
+
+if ("territory" %in% use_cost){
+    ref <- ref %>%
+        smooth_image(sigma = 2, iter = 15) %>%
+        equalize_image(sleft = 2.5, sright = 2.5) %>%
+        segment_image(col_resolution = 12) %>%
+        isolate_territories()
+}
 cat("Ref Procesing: DONE\n")
 
+#-----------------------------------------------------------------------------#
+# Prepare query
+# Only run territory isolation if required
+#-----------------------------------------------------------------------------#
 query_coord <- read.csv(synth_coord[j])
 query_counts <- read.csv(synth_counts[j], row.names = 1)
 query_counts$genes <- NULL
-
-# to overcome issues with same names when comparing same seed and query
-# the merging of the barcodes does not seem to be working very well
-if (i == j) {
-    query_coord$barcodes <- paste0("q_",query_coord$barcodes)
-    colnames(query_counts) <- paste0("q_",colnames(query_counts))
-}
-
 query <- build_vesalius_assay(coordinates = query_coord,
         counts = query_counts,
         assay = paste0(data_type,"_",unique(query_coord$sample)))
 query_cells <- query_coord$cell_labels
 names(query_cells) <- query_coord$barcodes
-query <- add_cells(query, query_cells)
+query <- add_cells(query, query_cells, add_name = "cell_labels")
+query_interactions <- query_coord$interactions
+names(query_interactions) <- query_coord$barcodes
+query <- add_cells(query, query_interactions, add_name = "interactions")
+
+
 query <- query %>%
-    generate_embeddings() %>%
-    smooth_image(dimensions = seq(1, 30), method =c("iso","box"),sigma=1, box = 10, iter = 20) %>%
-    segment_image(dimensions = seq(1, 30), method = "kmeans", col_resolution  = 12) %>%
-    isolate_territories()
+    generate_embeddings()
+
+if ("territory" %in% use_cost){
+    query <- query %>%
+        smooth_image(sigma = 2, iter = 10) %>%
+        equalize_image(sleft = 2.5, sright = 2.5) %>%
+        segment_image(col_resolution = 12) %>%
+        isolate_territories()
+}
 cat("Query Procesing: DONE\n")
 
 
-
-if (data_type == "dropped") {
-    matched <- map_assays(seed_assay = ref,
+#-----------------------------------------------------------------------------#
+# Mapping
+#-----------------------------------------------------------------------------#
+matched <- map_assays(seed_assay = ref,
     query_assay = query,
-    neighborhood = "graph",
-    use_norm = "raw",
-    depth = 2,
-    threshold = 0.9,
-    epochs = 20,
-    batch_size = 1000,
+    neighborhood = "knn",
+    use_norm = "log_norm",
+    method = "pearson",
+    k = 6,
+    epochs = 25,
+    batch_size = batch_size,
     allow_duplicates = TRUE,
-    jitter = FALSE,
-    use_cost = use_cost)
-} else {
-    matched <- map_assays(seed_assay = ref,
-    query_assay = query,
-    neighborhood = "graph",
-    use_norm = "raw",
-    depth = 2,
-    threshold = -1,
-    epochs = 20,
-    batch_size = 1000,
-    jitter = FALSE,
-    use_cost = use_cost)
-}
-
-
+    threshold = 0.9,
+    #threshold = 0,
+    filter_cells = TRUE,
+    jitter = 0,
+    use_cost = use_cost,
+    seed_meta_labels = c("cell_labels","interactions"),
+    query_meta_labels = c("cell_labels","interactions"),
+    digits = 5)
 
 cat("Mapping: DONE\n")
+#-----------------------------------------------------------------------------#
+# Adding and exporting scores for combinations
+#-----------------------------------------------------------------------------#
+if (!grepl(x = data_type, pattern = "computational_performance")){
+    contributions <- c("CV","IQR","POC")
+    for (i in contributions) {
+        matched <- get_cost_contribution(matched,method = i)
+    }
+    contrib_loc <- grep("contribution_score", names(matched@cost))
+    contribution_list <- vector("list", length(contrib_loc))
+    for (i in seq_along(contrib_loc)) {
+        contrib_local <- matched@cost[[contrib_loc[i]]]
+        contrib_local$method <- contributions[i]
+        colnames(contrib_local) <- gsub(contributions[i],"score",colnames(contrib_local))
+        contribution_list[[i]] <- contrib_local
+    }
+    
+    contribution_list <- do.call("rbind", contribution_list)
+    file_name <- paste0(output_data,"Vesalius_aligned_",data_type,"_",ref_tag,"_",query_tag,"_contribution_score.csv")
+    write.csv(contribution_list, file = file_name)
+    
+} else {
+    q("no")
+}
 
 #-----------------------------------------------------------------------------#
 # Export Mapping 
 #-----------------------------------------------------------------------------#
 export_match <- matched@territories
-#export_match$sample <- query_coord$sample
-colnames(export_match) <- c("barcodes","x","y","cell_labels")
-export_match$barcodes <- gsub("q_","", export_match$barcodes)
-ref_tag <- gsub(".csv","", tag[i])
-ref_tag <- gsub("spatial_territories_spatial_coordinates_","",ref_tag)
-query_tag <- gsub(".csv","", tag[j])
-query_tag <- gsub("spatial_territories_spatial_coordinates_","",query_tag)
-write.csv(export_match,
-    file = paste0(output_data,"Vesalius_aligned_",ref_tag,"_",query_tag,".csv")) 
+file_name <- paste0(output_data,"Vesalius_aligned_",data_type,"_",ref_tag,"_",query_tag,".csv")
 
+write.csv(export_match, file = file_name) 
+
+gc()
+q("no")

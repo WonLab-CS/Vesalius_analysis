@@ -11,8 +11,9 @@
 #SBATCH --mail-user=<patrick.martin@cshs.org>
 #SBATCH -p defq
 
-module load R/4.2.1
-module load rlibs/4.2.1
-module load hdf5
-#Rscript /common/martinp4/stos/pipeline/stos.r $SLURM_ARRAY_TASK_ID
-Rscript /common/martinp4/stos/pipeline/stos_plot.r $SLURM_ARRAY_TASK_ID
+module load R/4.2.1 rlibs/4.2.1
+input="/common/wonklab/seqFISH/"
+output="/common/martinp4/stos/report/stos/"
+script_loc="/home/martinp4/common/Vesalius_analysis/tech_to_tech/stos/"
+Rscript ${script_loc}stos.r $SLURM_ARRAY_TASK_ID $input $output
+Rscript ${script_loc}stos_plot.r $SLURM_ARRAY_TASK_ID $input $output

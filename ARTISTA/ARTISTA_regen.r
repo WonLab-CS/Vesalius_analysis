@@ -35,28 +35,25 @@ options(future.globals.maxSize = max_size)
 #-----------------------------------------------------------------------------#
 args <- commandArgs(TRUE)
 idx <- as.numeric(args[1])
+input <- args[2]
+output_data <- output_plots <- args[3]
 
-if (!dir.exists("/common/wonklab/Stereo_seq_arista/report/")) {
-    dir.create("/common/wonklab/Stereo_seq_arista/report/")
-}
-output_plots <- "/common/wonklab/Stereo_seq_arista/report/"
-output_data <- "/common/wonklab/Stereo_seq_arista/report/"
 
 
 #-----------------------------------------------------------------------------#
 # load and prepare data
 #-----------------------------------------------------------------------------#
-file_loc <- list.files("/common/wonklab/Stereo_seq_arista/",
+file_loc <- list.files(input,
     pattern = ".rds",
     full.names = TRUE)
 file_loc <- grep("DPI",file_loc, value = TRUE)
 file_vec <- file_loc[c(11,15,1,4,8,14,18)]
 
 seed <- file_vec[idx + 1]
-stage_seed <- gsub("/common/wonklab/Stereo_seq_arista//","",seed)
+stage_seed <- gsub(input,"",seed)
 stage_seed <- gsub(".rds","",stage_seed)
 query <- file_vec[idx]
-stage_query <- gsub("/common/wonklab/Stereo_seq_arista//","",query)
+stage_query <- gsub(input,"",query)
 stage_query <- gsub(".rds","",stage_query)
 
 seed <- readRDS(seed)
@@ -84,7 +81,7 @@ query <- build_vesalius_assay(coordinates = query_coord,
 query <- add_cells(query, cells = query_cells)
 
 
-#use_cost <- c("feature", "niche", "cell_type", "composition", "territory")
+
 use_cost <- c("feature", "niche", "territory")
 #-----------------------------------------------------------------------------#
 # Create embeddings 
