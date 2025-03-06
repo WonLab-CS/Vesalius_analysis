@@ -36,20 +36,19 @@ check_job_running() {
 }
 
 # Full list
-# tool_list=("Vesalius" "SLAT" "Tangram" "PASTE" "CytoSpace" "Scanorama" "GPSA")
-# task_list=("ssv2" "seqFISH" "stereo" "bench" "perf")
-# Buffer List - in case of errors and needing to rerun
 tool_list=("Vesalius" "SLAT" "Tangram" "PASTE" "CytoSpace" "Scanorama" "GPSA")
-task_list=("perf")
+task_list=("ssv2" "seqFISH" "stereo" "bench" "perf")
+
+
 
 #Task exclusion - just in case we want to skip some runs
-exclusion_list=("Tangram_bench" "Tangram_ssv2" "Tangram_seqFISH" "Tangram_stereo" \ 
-                "PASTE_bench" "PASTE_ssv2" "PASTE_stereo" "PASTE_seqFISH" \ 
-                "GPSA_ssv2" "GPSA_stereo" "GPSA_seqFISH" "GPSA_bench" \ 
-                "SLAT_bench" "SLAT_ssv2" "SLAT_seqFISH" "SLAT_stereo" \ 
-                "CytoSpace_bench" "CytoSpace_ssv2" "CytoSpace_seqFISH" "CytoSpace_stereo" \ 
-                "Vesalius_bench" "Vesalius_ssv2" "Vesalius_seqFISH" "Vesalius_stereo" \ 
-                "Scanorama_bench" "Scanorama_ssv2" "Scanorama_seqFISH" "Scanorama_stereo")
+# exclusion_list=("Tangram_bench" "Tangram_ssv2" "Tangram_seqFISH" "Tangram_stereo" \ 
+#                 "PASTE_bench" "PASTE_ssv2" "PASTE_stereo" "PASTE_seqFISH" \ 
+#                 "GPSA_ssv2" "GPSA_stereo" "GPSA_seqFISH" "GPSA_bench" \ 
+#                 "SLAT_bench" "SLAT_ssv2" "SLAT_seqFISH" "SLAT_stereo" \ 
+#                 "CytoSpace_bench" "CytoSpace_ssv2" "CytoSpace_seqFISH" "CytoSpace_stereo" \ 
+#                 "Vesalius_bench" "Vesalius_ssv2" "Vesalius_seqFISH" "Vesalius_stereo" \ 
+#                 "Scanorama_bench" "Scanorama_ssv2" "Scanorama_seqFISH" "Scanorama_stereo")
 
 # Loop over tasks and tools
 for task in "${task_list[@]}"; do

@@ -8,7 +8,7 @@ All the analysis was carried on a HPC unit running the [Slurm](https://slurm.sch
 
 We carried out the analyis by submitting jobs as batches. The shell scripts show the batch submission process and the analysis pipeline used in each case. 
 
-Note that in some cases, we create intermediate files which are use later. For instance, during becnhmarking, the output of each tool is standardized and then aggregated for scoring and plotting. 
+Note that in some cases, we create intermediate files which are used later. For instance, during benchmarking, the output of each tool is standardized and then aggregated for scoring and plotting. 
 
 Input directories contain (with exceptions - explictely mentioned) the data in the same form as downloaded from online repositories. 
 
@@ -35,13 +35,13 @@ Below, we present how the synthetic data was generated and how real data was for
 
 ### Generating Synthetic Data
 
-All synthetic data sets, we generated using the [oneiric](https://github.com/WonLab-CS/oneiric) package. The package contains a dedicated function to generate all synthetic data used in our analysis. The oneric diretory in this repository shows how the data sets were created and plots the output. 
+For all synthetic data sets, we used the [oneiric](https://github.com/WonLab-CS/oneiric) package. The package contains a dedicated function to generate all synthetic data used in our analysis. The oneric diretory in this repository shows how the data sets were created and plots the output. 
 
 NOTE: To generate the same data sets, please DO NO change the seed that is provided. 
 
 ### Spatial Data formatting 
 
-For the real data, we re-fromatted real spatial transcriptomics data to ensure a consitent input to our benchmarking code. Specifically, we reformatted:
+For the real data, we refromatted real spatial transcriptomics data to ensure a consitent input to our benchmarking code. Specifically, we reformatted:
 
 * [seqFISH Mouse embryo](https://content.cruk.cam.ac.uk/jmlab/SpatialMouseAtlas2020/)
 * [Slide-seq V2 mouse hippocampus](https://singlecell.broadinstitute.org/single_cell/study/SCP815/sensitive-spatial-genome-wide-expression-profiling-at-cellular-resolution#study-summary)
@@ -69,7 +69,7 @@ In brief, each tool use 2 main analysis scripts (except CytoSpace which requires
 
 The first script is use during the mapping of synthetic data sets while the second is used during the mapping of real biological data. 
 
-We used bash scripts to call these analysis files with the appropriate arguments. If you wish to re-run the analysis, please update the bash scripts with the appropriate path to directories, make sure synthetic data is available, and real data has been properly formatted (see above). As noted in the disclaimer, we used SLURM engine nomenclature. This can removed or replaced with which ever heading suits your needs. 
+We used bash scripts to call these analysis files with the appropriate arguments. If you wish to re-run the analysis, please update the bash scripts with the appropriate path to directories, make sure synthetic data is available, and real data has been properly formatted (see above). As noted in the disclaimer, we used a SLURM engine nomenclature. This can removed or replaced with which ever heading suits your needs. 
 
 The bash scripts allow:
 
@@ -95,9 +95,16 @@ For real data, there is an addition step:
 
 4. Plot Contribution scores (Vesalius Only)
 
+### Big Batch
+
+We also provide a **big batch** script which will sequentially submit benchmarking tasks across all tools and tasks. 
+
+NOTE: this does require all other scripts to have been updated accordingly.
+
+
 ## Cancer
 
-This directory contains the analysis related to mapping cells across tumor samples in protate cancer (Slide-seq v2). For simplicity, the `r` script called by the bash script performs the end to end analysis of samples.
+This directory contains the analysis related to mapping cells across tumor samples in protate cancer (Slide-seq v2). For simplicity, the `r` script called by the bash script performs an end-to-end analysis of samples.
 
 Data can be downloaded on the [GitHub](https://github.com/shenglinmei/ProstateCancerAnalysis) provided by the authors. The original publications is available [here](https://pmc.ncbi.nlm.nih.gov/articles/PMC9905093/#Abs1)
 
