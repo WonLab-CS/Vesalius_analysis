@@ -6,20 +6,14 @@ This repository contains the code used to generate all the plots in the _Vesaliu
 # Disclaimer
 All the analysis was carried on a HPC unit running the [Slurm](https://slurm.schedmd.com/documentation.html) workload manager. 
 
-We carried out the analyis by submitting jobs as batches. The shell scripts show the batch submission process. 
+We carried out the analyis by submitting jobs as batches. The shell scripts show the batch submission process and the analysis pipeline used in each case. 
 
-In the case where many data sets where used (for benchmarking for instance), we use the `$SLURM_ARRAY_TASK_ID` to define which data set
-will be selected for analysis. The selection was carried out in R or python. 
-The exported file names will always reflect the data sets that were used. 
+Note that in some cases, we create intermediate files which are use later. For instance, during becnhmarking, the output of each tool is standardized and then aggregated for scoring and plotting. 
 
-The process applied to each data set is shown in the R scripts (or python). The same code is applied to all data sets in that batch. 
+Input directories contain (with exceptions - explictely mentioned) the data in the same form as downloaded from online repositories. 
 
-For individual runs, we suggest modifying the data set up section of the analysis code to account for your specific needs. 
-However, in somce case, you will noticed that we load `.rds` files. We save intermediate files during our workflow and use these files in downsteams tasks. This allows to not need to run everything from scratch if it is not required.
 
 # Analysis - Overview
-
-TO BE UPDATED.
 
 ## ARTISTA
 
@@ -31,23 +25,82 @@ The data can be downloaded from [the STOmics data collection](https://db.cngb.or
 * ARTISTA_plot => Code used to generate mapping plots.
 * ARTISTA_regen_15_to_20_DPI => Analysis specific to the mapping of 15DPI to 20DPI data sets.
 
+Bash files are files used during submission.
+
 ## Benchmarking
 
-This directory contains the analysis related to the benchmarking of Vesalius on Synthetic data sets. 
+For this manuscript, we benchmarked our methods against 6 other tools (GPSA, PASTE, SLAT, CytoSpace, Tangram, Scanorama) in synthetic and real data sets.
 
-To generate synthetic data sets, please check out the dedicated repository [onieric](https://github.com/WonLab-CS/oneiric)
+Below, we present how the synthetic data was generated and how real data was formatted.
 
-This directory is organized by tool used for benchmarking. 
+### Generating Synthetic Data
 
-* [TOOL_NAME]_bench => code used to load and run mapping or spatial alignement task.
+All synthetic data sets, we generated using the [oneiric](https://github.com/WonLab-CS/oneiric) package. The package contains a dedicated function to generate all synthetic data used in our analysis. The oneric diretory in this repository shows how the data sets were created and plots the output. 
 
-The directory called `plotting and scoring` takes the data produced by each tool and unifies all the results into a single data frame that is used for plottin . 
+NOTE: To generate the same data sets, please DO NO change the seed that is provided. 
 
-**NOTEs**
+### Spatial Data formatting 
 
-* CytoSpace requires and extra data cleaning step. We decided to run it from the command line directly instead of running it through python as it seems that this approach is the preferred approach according to the authors. 
+For the real data, we re-fromatted real spatial transcriptomics data to ensure a consitent input to our benchmarking code. Specifically, we reformatted:
 
-* Vesalius contains extra `R` scripts related to testing different combinations of cost matrices and plotting the outcomes.
+* [seqFISH Mouse embryo](https://content.cruk.cam.ac.uk/jmlab/SpatialMouseAtlas2020/)
+* [Slide-seq V2 mouse hippocampus](https://singlecell.broadinstitute.org/single_cell/study/SCP815/sensitive-spatial-genome-wide-expression-profiling-at-cellular-resolution#study-summary)
+* [Stereo-seq mouse embryo](https://db.cngb.org/stomics/mosta/)
+
+Each sub-directory shows the reformatting procedure for all data sets. The reformated data is saved in the same directory as the original data and is the expected input of the benchmarking. The formatting consists of splitting data when needed, adjusting coordinates (fix to origin), adding cell type labels (includes deconvolution when required), and cell context (added useing oneiric)
+
+The original publication links are the following:
+
+* [seqFISH)](https://www.nature.com/articles/s41587-021-01006-2)
+* [Slide-seq V2](https://www.nature.com/articles/s41587-020-0739-1)
+* [Mouse embryonic development](https://www.sciencedirect.com/science/article/pii/S0092867422003993?via%3Dihub)
+
+
+
+
+### Benchmarking
+
+This directory contains all the code related to the benchmarking across all tools in both synthetic and real data. We also include a sub-directory containing the code related to result aggregation, scoring, and plotting.
+
+In brief, each tool use 2 main analysis scripts (except CytoSpace which requires further reformatting) with the appropriate extensions (`.r` or .`py`):
+
+1. `{tool}_{bench}`
+2. `{tool}_{bio_spa}`
+
+The first script is use during the mapping of synthetic data sets while the second is used during the mapping of real biological data. 
+
+We used bash scripts to call these analysis files with the appropriate arguments. If you wish to re-run the analysis, please update the bash scripts with the appropriate path to directories, make sure synthetic data is available, and real data has been properly formatted (see above). As noted in the disclaimer, we used SLURM engine nomenclature. This can removed or replaced with which ever heading suits your needs. 
+
+The bash scripts allow:
+
+1. Synthetic data benchmarking
+2. Computational performance benchmarking
+3. seqFISH benchmarking
+4. Slide-seq (ssv2) benchmarking
+5. Stereo-seq (stereo) benchmarking
+
+### Aggreating, Scoring, and Plotting
+
+We aggregate, score and plot all benchmarking results using a set of bash submission files which will call the appropriate R scripts to perform each task. The general pipeline is following:
+
+1. Unify mapping scores
+2. Plot Mapping scores
+3. Plot Mapping Event
+
+For synthetic data, there is an additional step:
+
+4. Plot computational performance
+
+For real data, there is an addition step:
+
+4. Plot Contribution scores (Vesalius Only)
+
+## Cancer
+
+This directory contains the analysis related to mapping cells across tumor samples in protate cancer (Slide-seq v2). For simplicity, the `r` script called by the bash script performs the end to end analysis of samples.
+
+Data can be downloaded on the [GitHub](https://github.com/shenglinmei/ProstateCancerAnalysis) provided by the authors. The original publications is available [here](https://pmc.ncbi.nlm.nih.gov/articles/PMC9905093/#Abs1)
+
 
 ## IMC
 
@@ -66,27 +119,6 @@ The data can be downloaded from [the STOmics data collection](https://db.cngb.or
 * MOSTA => pre-processing and mapping of embryo data forward in time.
 * MOSTA_plot => plotting mapping results .
 * MOSTA_cluster => clustering of mapped cells and DEG analysis .
-
-## Spatial Data sets
-
-This directory contains the analysis related to the [Slide-seq V2](https://www.nature.com/articles/s41587-020-0739-1) and [seqFISH)](https://www.nature.com/articles/s41587-021-01006-2) data.
-
-The data sets can be downloaed from:
-
-[SSV2](https://singlecell.broadinstitute.org/single_cell/study/SCP815/sensitive-spatial-genome-wide-expression-profiling-at-cellular-resolution#study-summary)
-
-[seqFISH](https://content.cruk.cam.ac.uk/jmlab/SpatialMouseAtlas2020/)
-
-The Slide-seq sub-directory contains:
-
-* slide_seq => pre-processing and mapping.
-* slide_seq_plot => plotting of results. 
-
-The seqFISH sub-directory contains:
-
-* seq_FISH => pre-processing and mapping (using multiple cost matrix combinations - exported).
-* seq_FISH_plot => plotting of mapping results. 
-* seq_FISH_combination_plot => quantitative scoring of matrix combinations and plotting.
 
 ## Tech to Tech
 This directory contains the analysis related to cross technology and cross resolution mapping. For this analysis we used data from the following sources:

@@ -47,11 +47,7 @@ ref_tag <- args[5]
 query_tag <- args[6]
 cores <- as.numeric(args[7])
 
-# counts <- readRDS("/common/wonklab/SSv2/slide.seq.raw.counts.rds")
-# coordinates <- readRDS("/common/wonklab/SSv2/slide.seq.BeadLocations.rds")
-# annotations <- readRDS("/common/wonklab/SSv2/slide.seq.ano.rds")
-# ref <- "Tumor01"
-# query <- "Tumor02"
+
 plan(multicore, workers = cores)
 #-----------------------------------------------------------------------------#
 # Utilities
@@ -122,20 +118,7 @@ matched <- map_assays(
     query_meta_labels = c("cell_labels"),
     digits = 5)
 
-# matched <- integrate_assays(
-#     mapped = matched,
-#     reference = ref,
-#     infer = FALSE,
-#     use_counts = "raw",
-#     labels_mapped = c("cell_labels"),
-#     labels_reference = c("cell_labels"),
-#     tensor_resolution = 1)
 
-# matched <- matched %>%
-#     smooth_image(dimensions = seq(1, 30), sigma = 2, iter = 20,verbose = T) %>%
-#     equalize_image(dimensions = seq(1, 30), sleft = 2, sright = 2, verbose = T) %>%
-#     segment_image(dimensions = seq(1, 30), method = "kmeans", col_resolution  = 10, verbose = T) %>%
-#     isolate_territories(verbose = T)
 
 
 #-----------------------------------------------------------------------------#

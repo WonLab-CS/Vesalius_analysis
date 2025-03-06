@@ -16,7 +16,7 @@ data_type="SSv2"
 output="/common/martinp4/benchmarking_out/report/"
 ref="Puck_200115_08"
 query="Puck_190921_21"
-#Rscript ${script_loc}unify_mapping_score.r $input_matched $input_ref $data_type $output $ref $query
-#Rscript ${script_loc}plot_mapping_score_bio.r $output $data_type
+Rscript ${script_loc}unify_mapping_score.r $input_matched $input_ref $data_type $output $ref $query
+Rscript ${script_loc}plot_mapping_score_bio.r $output $data_type
 Rscript ${script_loc}plot_mapping_event_bio.r $input_matched $input_ref $data_type $output $ref $query
-#Rscript ${script_loc}plot_mapping_contribution_bio.r $input_matched $input_ref $data_type $output $ref $query
+Rscript ${script_loc}plot_mapping_contribution_bio.r $input_matched $input_ref $data_type $output $ref $query
