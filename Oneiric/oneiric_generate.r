@@ -7,7 +7,6 @@ output <- args[1]
 seed <- as.numeric(args[2])
 generate_sim_data(output = output,
     seed = seed,
-    plot = TRUE,
     run_mem = TRUE,
     simple = TRUE)
 
